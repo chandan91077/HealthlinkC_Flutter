@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
@@ -477,6 +478,13 @@ class _AuthPageState extends State<AuthPage> {
     }
 
     if (role == 'doctor') {
+      final userId = authProvider.user?.id?.trim() ?? '';
+      if (userId.isNotEmpty) {
+        await _createPendingDoctorProfile(userId);
+      }
+      if (!mounted) {
+        return;
+      }
       context.go(AppRoutes.doctorDashboard);
       return;
     }
@@ -501,28 +509,72 @@ class _AuthPageState extends State<AuthPage> {
     setState(() => _isSubmitting = true);
     try {
       final api = sl<ApiClient>();
+      final selectedRoleValue = selectedRole.toLowerCase();
       final response = await api.post(
         '/api/auth/register',
         data: {
           'full_name': _fullNameController.text.trim(),
           'email': _emailController.text.trim(),
           'password': _passwordController.text,
-          'role': selectedRole.toLowerCase(),
+          'role': selectedRoleValue,
         },
       );
 
       final data = response.data as Map<String, dynamic>;
-      final token = data['token'] as String?;
-      if (token == null || token.isEmpty) {
+      final token = data['token']?.toString() ?? '';
+      final userId = data['_id']?.toString() ?? '';
+
+      if (token.isEmpty) {
         _showMessage('Signup failed: token not received.');
         return;
       }
 
       await _secureStorage.write(key: 'auth_token', value: token);
-      _showMessage('Account created successfully.');
-      if (mounted) {
+      await _secureStorage.write(key: 'user_role', value: selectedRoleValue);
+
+      if (selectedRoleValue == 'doctor' && userId.isNotEmpty) {
+        await _createPendingDoctorProfile(userId);
+      }
+
+      final authProvider = sl<AuthProvider>();
+      final loginSuccess = await authProvider.login(
+        emailOrPhone: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (!loginSuccess) {
+        if (!mounted) {
+          return;
+        }
+        _showMessage(
+            authProvider.errorMessage ?? 'Account created. Please login.');
+        context.go(AppRoutes.login);
+        return;
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      if (authProvider.role == 'doctor') {
+        _showMessage('Doctor account created. Waiting for admin verification.');
+        context.go(AppRoutes.doctorDashboard);
+      } else if (authProvider.role == 'patient') {
+        _showMessage('Account created successfully.');
+        context.go(AppRoutes.patientDashboard);
+      } else {
         context.go(AppRoutes.home);
       }
+    } on DioException catch (error) {
+      final responseData = error.response?.data;
+      final serverMessage = responseData is Map<String, dynamic>
+          ? (responseData['message']?.toString() ?? '')
+          : '';
+      _showMessage(
+        serverMessage.isNotEmpty
+            ? serverMessage
+            : 'Signup failed. Try another email or check backend.',
+      );
     } catch (_) {
       _showMessage('Signup failed. Try another email or check backend.');
     } finally {
@@ -530,6 +582,41 @@ class _AuthPageState extends State<AuthPage> {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  Future<void> _createPendingDoctorProfile(String userId) async {
+    final normalizedId = userId.trim();
+    if (normalizedId.isEmpty) {
+      return;
+    }
+
+    final api = sl<ApiClient>();
+    try {
+      await api.get('/api/doctors/user/$normalizedId');
+      return;
+    } on DioException catch (error) {
+      if (error.response?.statusCode != 404) {
+        return;
+      }
+    } catch (_) {
+      return;
+    }
+
+    await api.post(
+      '/api/doctors',
+      data: {
+        'user_id': normalizedId,
+        'specialization': 'General Medicine',
+        'experience_years': 0,
+        'consultation_fee': 0,
+        'emergency_fee': 0,
+        'bio': '',
+        'state': '',
+        'location': '',
+        'is_verified': false,
+        'verification_status': 'pending',
+      },
+    );
   }
 
   void _showMessage(String message) {

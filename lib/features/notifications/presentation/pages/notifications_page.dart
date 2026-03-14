@@ -86,12 +86,39 @@ class _NotificationsPageState extends State<NotificationsPage> {
     });
   }
 
-  void _clearAll() {
+  Future<void> _clearAll() async {
+    if (_notifications.isEmpty) {
+      return;
+    }
+
+    try {
+      await sl<ApiClient>().delete('/api/notifications/clear-all');
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to clear notifications.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
     setState(() {
-      _notifications = _notifications
-          .map((n) => n.copyWith(isUnread: false))
-          .toList(growable: false);
+      _notifications = const [];
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('All notifications cleared.'),
+      ),
+    );
   }
 
   Future<void> _removeNotification(_NotificationItem notification) async {

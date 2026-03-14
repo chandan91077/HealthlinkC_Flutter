@@ -4,6 +4,7 @@ import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
 import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/core/network/api_client.dart';
 import 'package:healthlink_connect_flutter/core/theme/app_colors.dart';
+import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 
 class DoctorDetailsPage extends StatefulWidget {
   const DoctorDetailsPage({
@@ -229,6 +230,7 @@ class _DoctorDetailsPageState extends State<DoctorDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final canBookAppointment = sl<AuthProvider>().role != 'doctor';
     final name = _doctorName();
     final specialization = _doctor?['specialization']?.toString() ?? 'General';
     final experience = (_doctor?['experience_years'] as num?)?.toInt() ?? 0;
@@ -377,16 +379,18 @@ class _DoctorDetailsPageState extends State<DoctorDetailsPage> {
                                   child: const Text('View Certificate'),
                                 ),
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () => context.push(
-                                    AppRoutes.bookAppointment.replaceFirst(
-                                        ':doctorId', widget.doctorId),
+                              if (canBookAppointment) ...[
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () => context.push(
+                                      AppRoutes.bookAppointment.replaceFirst(
+                                          ':doctorId', widget.doctorId),
+                                    ),
+                                    child: const Text('Book Appointment'),
                                   ),
-                                  child: const Text('Book Appointment'),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ],

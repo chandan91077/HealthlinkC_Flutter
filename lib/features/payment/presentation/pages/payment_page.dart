@@ -16,7 +16,8 @@ class _PaymentPageState extends State<PaymentPage> {
   bool _isProcessing = false;
   String? _error;
   Map<String, dynamic>? _appointment;
-  String _selectedMethod = 'upi';
+  String _selectedPaymentMode = 'online';
+  String _selectedOnlineMethod = 'upi';
 
   @override
   void initState() {
@@ -67,7 +68,7 @@ class _PaymentPageState extends State<PaymentPage> {
       return;
     }
 
-    final amount = (_appointment!['amount'] as num?)?.toInt() ?? 0;
+    final amount = (_appointment!['amount'] as num?)?.toDouble() ?? 0;
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -88,7 +89,7 @@ class _PaymentPageState extends State<PaymentPage> {
         data: {
           'appointment_id': widget.bookingId,
           'amount': amount,
-          'payment_method': 'online',
+          'payment_method': _selectedPaymentMode,
           'razorpay_order_id':
               'cf_order_${DateTime.now().millisecondsSinceEpoch}',
           'razorpay_payment_id':
@@ -101,9 +102,14 @@ class _PaymentPageState extends State<PaymentPage> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Online payment successful. Appointment confirmed.'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: Text(
+            _selectedPaymentMode == 'cash'
+                ? 'Cash payment selected. Appointment is pending until payment is completed.'
+                : 'Online payment successful. Appointment confirmed.',
+          ),
+          backgroundColor:
+              _selectedPaymentMode == 'cash' ? Colors.orange : Colors.green,
         ),
       );
       context.go('/appointments?tab=upcoming');
@@ -140,14 +146,60 @@ class _PaymentPageState extends State<PaymentPage> {
     return 'Dr. Doctor';
   }
 
+  double get _doctorFee {
+    final direct = (_appointment?['doctor_fee'] as num?)?.toDouble();
+    if (direct != null && direct >= 0) {
+      return direct;
+    }
+
+    final doctor = _appointment?['doctor_id'];
+    if (doctor is Map<String, dynamic>) {
+      final appointmentType =
+          (_appointment?['appointment_type']?.toString() ?? 'scheduled')
+              .toLowerCase();
+      final fallback = appointmentType == 'emergency'
+          ? (doctor['emergency_fee'] as num?)?.toDouble()
+          : (doctor['consultation_fee'] as num?)?.toDouble();
+      if (fallback != null && fallback >= 0) {
+        return fallback;
+      }
+    }
+
+    final amount = (_appointment?['amount'] as num?)?.toDouble() ?? 0;
+    return amount;
+  }
+
+  double get _platformFee {
+    final direct = (_appointment?['platform_fee'] as num?)?.toDouble();
+    if (direct != null && direct >= 0) {
+      return direct;
+    }
+
+    final amount = (_appointment?['amount'] as num?)?.toDouble() ?? 0;
+    final inferred = amount - _doctorFee;
+    return inferred > 0 ? inferred : 0;
+  }
+
+  double get _totalAmount {
+    final amount = (_appointment?['amount'] as num?)?.toDouble() ?? 0;
+    if (amount > 0) {
+      return amount;
+    }
+    return _doctorFee + _platformFee;
+  }
+
+  String _formatRupee(double value) {
+    return '₹ ${value.toStringAsFixed(2)}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final amount = (_appointment?['amount'] as num?)?.toInt() ?? 0;
-    const tax = 0;
-    final total = amount + tax;
+    final doctorFee = _doctorFee;
+    final platformFee = _platformFee;
+    final total = _totalAmount;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cashfree Checkout')),
+      appBar: AppBar(title: const Text('Appointment Checkout')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -168,18 +220,20 @@ class _PaymentPageState extends State<PaymentPage> {
                             children: [
                               _buildFeeRow('Doctor', _doctorName()),
                               const SizedBox(height: 8),
-                              _buildFeeRow('Consultation Fee', '₹ $amount.00'),
+                              _buildFeeRow('Doctor Consultation Fee',
+                                  _formatRupee(doctorFee)),
                               const SizedBox(height: 8),
-                              _buildFeeRow('Taxes & SGST', '₹ $tax.00'),
+                              _buildFeeRow('Platform Fee (Admin)',
+                                  _formatRupee(platformFee)),
                               const Divider(height: 32),
-                              _buildFeeRow('Total Amount', '₹ $total.00',
+                              _buildFeeRow('Total Amount', _formatRupee(total),
                                   isTotal: true),
                             ],
                           ),
                         ),
                       ),
                       const SizedBox(height: 32),
-                      const Text('Online Payment Method',
+                      const Text('Payment Mode',
                           style: TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
@@ -187,13 +241,48 @@ class _PaymentPageState extends State<PaymentPage> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          _buildMethodChip(
-                              'UPI', Icons.account_balance_wallet, 'upi'),
-                          _buildMethodChip('Card', Icons.credit_card, 'card'),
-                          _buildMethodChip('Net Banking', Icons.account_balance,
-                              'netbanking'),
+                          ChoiceChip(
+                            label: const Text('Cash'),
+                            selected: _selectedPaymentMode == 'cash',
+                            onSelected: (selected) {
+                              if (!selected) return;
+                              setState(() => _selectedPaymentMode = 'cash');
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Online'),
+                            selected: _selectedPaymentMode == 'online',
+                            onSelected: (selected) {
+                              if (!selected) return;
+                              setState(() => _selectedPaymentMode = 'online');
+                            },
+                          ),
                         ],
                       ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _selectedPaymentMode == 'cash'
+                            ? 'Pay cash at clinic/hospital. Appointment remains pending until completed.'
+                            : 'Pay online now to confirm appointment immediately.',
+                      ),
+                      if (_selectedPaymentMode == 'online') ...[
+                        const SizedBox(height: 24),
+                        const Text('Online Method',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildMethodChip(
+                                'UPI', Icons.account_balance_wallet, 'upi'),
+                            _buildMethodChip('Card', Icons.credit_card, 'card'),
+                            _buildMethodChip('Net Banking',
+                                Icons.account_balance, 'netbanking'),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 48),
                       ElevatedButton(
                         onPressed: _isProcessing ? null : _processPayment,
@@ -209,7 +298,9 @@ class _PaymentPageState extends State<PaymentPage> {
                                   color: Colors.white,
                                 ),
                               )
-                            : Text('Pay ₹ $total.00'),
+                            : Text(_selectedPaymentMode == 'cash'
+                                ? 'Confirm Cash Payment'
+                                : 'Pay ${_formatRupee(total)}'),
                       ),
                     ],
                   ),
@@ -234,14 +325,14 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Widget _buildMethodChip(String title, IconData icon, String value) {
-    final selected = _selectedMethod == value;
+    final selected = _selectedOnlineMethod == value;
     return ChoiceChip(
       avatar: Icon(icon, size: 16),
       label: Text(title),
       selected: selected,
       onSelected: (isSelected) {
         if (!isSelected) return;
-        setState(() => _selectedMethod = value);
+        setState(() => _selectedOnlineMethod = value);
       },
     );
   }

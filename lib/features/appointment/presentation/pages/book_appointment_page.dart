@@ -5,6 +5,7 @@ import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
 import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/core/network/api_client.dart';
 import 'package:healthlink_connect_flutter/core/theme/app_colors.dart';
+import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 
 class BookAppointmentPage extends StatefulWidget {
   final String doctorId;
@@ -21,7 +22,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
   DateTime _selectedDate = DateTime.now();
   String _selectedSlot = '';
-  String _paymentMode = 'cash';
+  String _appointmentType = 'scheduled';
   Map<String, dynamic>? _doctor;
   List<Map<String, dynamic>> _availability = const [];
   final TextEditingController _notesController = TextEditingController();
@@ -29,6 +30,23 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   @override
   void initState() {
     super.initState();
+
+    if (sl<AuthProvider>().role == 'doctor') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Doctors cannot book appointments.'),
+          ),
+        );
+        context.go(AppRoutes.doctorDashboard);
+      });
+      return;
+    }
+
     _loadData();
   }
 
@@ -121,6 +139,33 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   }
 
   List<String> get _daySlots {
+    if (_appointmentType == 'emergency') {
+      final now = DateTime.now();
+      final isToday = _selectedDate.year == now.year &&
+          _selectedDate.month == now.month &&
+          _selectedDate.day == now.day;
+      final nowMinutes = now.hour * 60 + now.minute;
+
+      final slots = <String>[];
+      for (int hour = 9; hour <= 20; hour++) {
+        final atHour = '${hour.toString().padLeft(2, '0')}:00';
+        final atHourMinutes = hour * 60;
+        if (!isToday || atHourMinutes > nowMinutes) {
+          slots.add(atHour);
+        }
+
+        if (hour < 20) {
+          final atHalf = '${hour.toString().padLeft(2, '0')}:30';
+          final atHalfMinutes = hour * 60 + 30;
+          if (!isToday || atHalfMinutes > nowMinutes) {
+            slots.add(atHalf);
+          }
+        }
+      }
+
+      return slots;
+    }
+
     final avail = _selectedAvailability;
     if (avail == null) {
       return const [];
@@ -201,15 +246,16 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     });
 
     try {
-      final consultationFee =
-          (_doctor!['consultation_fee'] as num?)?.toInt() ?? 0;
+      final consultationFee = _appointmentType == 'emergency'
+          ? (_doctor!['emergency_fee'] as num?)?.toInt() ?? 0
+          : (_doctor!['consultation_fee'] as num?)?.toInt() ?? 0;
       final appointmentResponse = await sl<ApiClient>().post(
         '/api/appointments',
         data: {
           'doctor_id': widget.doctorId,
           'appointment_date': DateFormat('yyyy-MM-dd').format(_selectedDate),
           'appointment_time': _selectedSlot,
-          'appointment_type': 'scheduled',
+          'appointment_type': _appointmentType,
           'amount': consultationFee,
           'notes': _notesController.text.trim(),
         },
@@ -222,43 +268,6 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
       if (appointmentId.isEmpty) {
         throw Exception('Appointment id not returned');
-      }
-
-      if (_paymentMode == 'cash') {
-        final paymentResponse = await sl<ApiClient>().post(
-          '/api/payments',
-          data: {
-            'appointment_id': appointmentId,
-            'amount': consultationFee,
-            'payment_method': 'cash',
-          },
-        );
-
-        final data = paymentResponse.data;
-        final pending = data is Map<String, dynamic>
-            ? data['appointment_pending'] == true
-            : data is Map
-                ? data['appointment_pending'] == true
-                : false;
-
-        if (!pending) {
-          throw Exception('Cash appointment pending state was not returned');
-        }
-
-        if (!mounted) {
-          return;
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Appointment created with pending cash payment. It may cancel automatically if not completed in time.',
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        context.go('${AppRoutes.appointments}?tab=upcoming');
-        return;
       }
 
       if (!mounted) {
@@ -295,6 +304,9 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       user is Map<String, dynamic> ? user['avatar_url']?.toString() : null,
     );
     final specialization = _doctor?['specialization']?.toString() ?? 'General';
+    final consultationFee = _appointmentType == 'emergency'
+        ? (_doctor?['emergency_fee'] as num?)?.toInt() ?? 0
+        : (_doctor?['consultation_fee'] as num?)?.toInt() ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -345,6 +357,47 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                         ],
                       ),
                       const SizedBox(height: 32),
+
+                      // Appointment Type
+                      Text('Appointment Type',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Scheduled'),
+                            selected: _appointmentType == 'scheduled',
+                            onSelected: (selected) {
+                              if (!selected) return;
+                              setState(() {
+                                _appointmentType = 'scheduled';
+                                _selectedSlot = '';
+                              });
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Emergency'),
+                            selected: _appointmentType == 'emergency',
+                            onSelected: (selected) {
+                              if (!selected) return;
+                              setState(() {
+                                _appointmentType = 'emergency';
+                                _selectedSlot = '';
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      if (_appointmentType == 'emergency') ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Emergency mode allows priority booking and can preempt already booked slots.',
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
 
                       // Date Selection
                       Text('Select Date',
@@ -415,7 +468,8 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                       Text('Available Slots',
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 16),
-                      if (_selectedAvailability == null)
+                      if (_appointmentType != 'emergency' &&
+                          _selectedAvailability == null)
                         const Text(
                           'Doctor is not available on selected date.',
                           style: TextStyle(color: Colors.redAccent),
@@ -466,37 +520,9 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      Text('Payment Mode',
-                          style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('Cash'),
-                            selected: _paymentMode == 'cash',
-                            onSelected: (selected) {
-                              if (!selected) return;
-                              setState(() => _paymentMode = 'cash');
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('Online'),
-                            selected: _paymentMode == 'online',
-                            onSelected: (selected) {
-                              if (!selected) return;
-                              setState(() => _paymentMode = 'online');
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _paymentMode == 'cash'
-                            ? 'Pay cash at clinic/hospital. Appointment confirms now.'
-                            : 'Open Cashfree checkout page and pay online.',
-                        style: const TextStyle(color: AppColors.textSecondary),
+                      const Text(
+                        'Payment mode (Cash/Online) will be selected on checkout page.',
+                        style: TextStyle(color: AppColors.textSecondary),
                       ),
                       Container(
                         width: double.infinity,
@@ -507,7 +533,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                           color: AppColors.primary.withValues(alpha: 0.08),
                         ),
                         child: Text(
-                          'Pay Amount: ₹${(_doctor?['consultation_fee'] as num?)?.toInt() ?? 0}',
+                          'Pay Amount: ₹$consultationFee',
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             color: AppColors.primary,
@@ -538,9 +564,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                       color: Colors.white,
                     ),
                   )
-                : Text(_paymentMode == 'online'
-                    ? 'Proceed to Cashfree'
-                    : 'Confirm Appointment'),
+                : const Text('Proceed to Checkout'),
           ),
         ),
       ),

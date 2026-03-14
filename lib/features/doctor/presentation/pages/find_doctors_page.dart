@@ -4,6 +4,7 @@ import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
 import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/core/network/api_client.dart';
 import 'package:healthlink_connect_flutter/core/theme/app_colors.dart';
+import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 import 'package:healthlink_connect_flutter/features/doctor/presentation/pages/doctor_details_page.dart';
 
 class FindDoctorsPage extends StatefulWidget {
@@ -212,6 +213,7 @@ class _FindDoctorsPageState extends State<FindDoctorsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final canBookAppointment = sl<AuthProvider>().role != 'doctor';
     final visibleCount = _visibleDoctors.length;
 
     return Container(
@@ -476,23 +478,25 @@ class _FindDoctorsPageState extends State<FindDoctorsPage> {
                                                     const Text('View Details'),
                                               ),
                                             ),
-                                            const SizedBox(height: 8),
-                                            SizedBox(
-                                              width: double.infinity,
-                                              child: OutlinedButton(
-                                                onPressed: doctorId.isEmpty
-                                                    ? null
-                                                    : () => context.push(
-                                                          AppRoutes
-                                                              .bookAppointment
-                                                              .replaceFirst(
-                                                                  ':doctorId',
-                                                                  doctorId),
-                                                        ),
-                                                child: const Text(
-                                                    'Book Appointment'),
+                                            if (canBookAppointment) ...[
+                                              const SizedBox(height: 8),
+                                              SizedBox(
+                                                width: double.infinity,
+                                                child: OutlinedButton(
+                                                  onPressed: doctorId.isEmpty
+                                                      ? null
+                                                      : () => context.push(
+                                                            AppRoutes
+                                                                .bookAppointment
+                                                                .replaceFirst(
+                                                                    ':doctorId',
+                                                                    doctorId),
+                                                          ),
+                                                  child: const Text(
+                                                      'Book Appointment'),
+                                                ),
                                               ),
-                                            ),
+                                            ],
                                             const SizedBox(height: 8),
                                             Align(
                                               alignment: Alignment.centerLeft,

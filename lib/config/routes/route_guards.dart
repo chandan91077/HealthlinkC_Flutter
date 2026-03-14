@@ -6,6 +6,7 @@ import 'app_routes.dart';
 String? routeGuard(context, GoRouterState state) {
   final authProvider = sl<AuthProvider>();
   final bool isLoggedIn = authProvider.isAuthenticated;
+  final role = authProvider.role;
 
   final publicPages = [
     '/',
@@ -33,13 +34,18 @@ String? routeGuard(context, GoRouterState state) {
 
   if (!isLoggedIn && !isPublicPage) return AppRoutes.login;
   if (isLoggedIn &&
+      role == 'doctor' &&
+      state.matchedLocation == AppRoutes.bookAppointment) {
+    return AppRoutes.doctorDashboard;
+  }
+  if (isLoggedIn &&
       (state.matchedLocation == AppRoutes.login ||
           state.matchedLocation == AppRoutes.register)) {
-    if (authProvider.role == 'doctor') {
+    if (role == 'doctor') {
       return AppRoutes.doctorDashboard;
     }
 
-    if (authProvider.role == 'patient') {
+    if (role == 'patient') {
       return AppRoutes.patientDashboard;
     }
 
