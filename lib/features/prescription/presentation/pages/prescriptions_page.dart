@@ -45,6 +45,56 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
     return 'Patient';
   }
 
+  String _patientNameFromPrescription(Map<String, dynamic> prescription) {
+    final patient = prescription['patient_id'];
+    if (patient is Map<String, dynamic>) {
+      final name = patient['full_name']?.toString().trim() ?? '';
+      if (name.isNotEmpty) {
+        return name;
+      }
+    }
+
+    final appointment = prescription['appointment_id'];
+    if (appointment is Map<String, dynamic>) {
+      final appointmentPatient = appointment['patient_id'];
+      if (appointmentPatient is Map<String, dynamic>) {
+        final name = appointmentPatient['full_name']?.toString().trim() ?? '';
+        if (name.isNotEmpty) {
+          return name;
+        }
+      }
+    }
+
+    return 'Patient';
+  }
+
+  List<String> _medicineLines(Map<String, dynamic> prescription) {
+    final medications = prescription['medications'];
+    if (medications is! List) {
+      return const [];
+    }
+
+    return medications
+        .whereType<Map>()
+        .map((medication) {
+          final map = medication.map((k, v) => MapEntry(k.toString(), v));
+          final name = map['name']?.toString().trim() ?? '';
+          final dosage = map['dosage']?.toString().trim() ?? '';
+          final frequency = map['frequency']?.toString().trim() ?? '';
+          final duration = map['duration']?.toString().trim() ?? '';
+
+          final parts = <String>[];
+          if (name.isNotEmpty) parts.add(name);
+          if (dosage.isNotEmpty) parts.add('Dose: $dosage');
+          if (frequency.isNotEmpty) parts.add('Day: $frequency');
+          if (duration.isNotEmpty) parts.add('Duration: $duration');
+
+          return parts.join(' • ');
+        })
+        .where((line) => line.isNotEmpty)
+        .toList();
+  }
+
   List<Map<String, dynamic>> _doctorBookableAppointments(
       List<Map<String, dynamic>> allAppointments) {
     return allAppointments.where((appointment) {
@@ -367,6 +417,8 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
                             final prescription = _prescriptions[index];
                             final doctor = prescription['doctor_id'];
                             final appointment = prescription['appointment_id'];
+                            final patientName =
+                                _patientNameFromPrescription(prescription);
                             final doctorName = doctor is Map<String, dynamic> &&
                                     doctor['user_id'] is Map<String, dynamic>
                                 ? doctor['user_id']['full_name']?.toString() ??
@@ -379,9 +431,8 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
                                 ? appointment['appointment_date']?.toString() ??
                                     ''
                                 : '';
-                            final meds = prescription['medications'] is List
-                                ? (prescription['medications'] as List).length
-                                : 0;
+                            final medicineLines = _medicineLines(prescription);
+                            final meds = medicineLines.length;
                             final pdfUrl = prescription['pdf_url']?.toString();
 
                             return Card(
@@ -395,11 +446,16 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          'Dr. $doctorName',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16),
+                                        Expanded(
+                                          child: Text(
+                                            isDoctor
+                                                ? 'Patient: $patientName'
+                                                : 'Dr. $doctorName',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                         Text(
                                           date.isEmpty ? 'No date' : date,
@@ -414,6 +470,26 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
                                             color: Colors.grey)),
                                     const SizedBox(height: 4),
                                     Text('$meds medicines prescribed'),
+                                    if (medicineLines.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      ...medicineLines
+                                          .take(2)
+                                          .map((line) => Text(
+                                                '• $line',
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.black87,
+                                                ),
+                                              )),
+                                      if (medicineLines.length > 2)
+                                        Text(
+                                          '+${medicineLines.length - 2} more medicines',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                    ],
                                     const Divider(height: 24),
                                     Row(
                                       children: [

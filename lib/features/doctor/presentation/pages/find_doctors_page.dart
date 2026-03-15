@@ -360,9 +360,10 @@ class _FindDoctorsPageState extends State<FindDoctorsPage> {
                                   final bio = doctor['bio']?.toString() ?? '';
                                   final user = doctor['user_id'];
                                   final avatarUrl = _resolveImageUrl(
-                                    user is Map<String, dynamic>
-                                        ? user['avatar_url']?.toString()
-                                        : null,
+                                    doctor['profile_image_url']?.toString() ??
+                                        (user is Map<String, dynamic>
+                                            ? user['avatar_url']?.toString()
+                                            : null),
                                   );
 
                                   return Card(

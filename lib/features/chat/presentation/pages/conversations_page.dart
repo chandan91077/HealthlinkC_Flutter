@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -12,6 +14,7 @@ class ConversationsPage extends StatefulWidget {
 }
 
 class _ConversationsPageState extends State<ConversationsPage> {
+  Timer? _autoRefreshTimer;
   bool _isLoading = true;
   String? _error;
   List<Map<String, dynamic>> _conversations = const [];
@@ -20,6 +23,18 @@ class _ConversationsPageState extends State<ConversationsPage> {
   void initState() {
     super.initState();
     _loadConversations();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || _isLoading) {
+        return;
+      }
+      _loadConversations();
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadConversations() async {
@@ -84,6 +99,20 @@ class _ConversationsPageState extends State<ConversationsPage> {
     return '';
   }
 
+  String _appointmentId(Map<String, dynamic> conversation) {
+    final raw = conversation['appointment_id'];
+    if (raw is String) {
+      return raw;
+    }
+    if (raw is Map<String, dynamic>) {
+      return raw['_id']?.toString() ?? '';
+    }
+    if (raw is Map) {
+      return raw['_id']?.toString() ?? '';
+    }
+    return raw?.toString() ?? '';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -116,9 +145,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                               const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final conversation = _conversations[index];
-                            final appointmentId =
-                                conversation['appointment_id']?.toString() ??
-                                    '';
+                            final appointmentId = _appointmentId(conversation);
                             final unread = (conversation['unreadCount'] as num?)
                                     ?.toInt() ??
                                 0;

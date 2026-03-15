@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
+import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 import 'package:healthlink_connect_flutter/features/doctor/presentation/pages/all_specializations_page.dart';
 import 'package:healthlink_connect_flutter/shared/widgets/app_footer.dart';
 import 'package:healthlink_connect_flutter/shared/widgets/medi_connect_header_drawer.dart';
@@ -269,11 +271,11 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
 
         final double mainAxisExtent;
         if (crossAxisCount == 1) {
-          mainAxisExtent = 190;
+          mainAxisExtent = 205;
         } else if (crossAxisCount == 2) {
-          mainAxisExtent = 215;
+          mainAxisExtent = 225;
         } else {
-          mainAxisExtent = 230;
+          mainAxisExtent = 240;
         }
 
         return GridView.builder(
@@ -461,6 +463,8 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
   }
 
   Widget _buildCtaSection() {
+    final isLoggedIn = context.watch<AuthProvider>().isAuthenticated;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
@@ -503,21 +507,23 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
                       style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.go(AppRoutes.register),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white60),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+              if (!isLoggedIn) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => context.go(AppRoutes.register),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white60),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Sign Up Free',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
-                  child: const Text('Sign Up Free',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
-              ),
+              ],
             ],
           ),
         ],

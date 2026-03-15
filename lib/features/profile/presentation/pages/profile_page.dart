@@ -1,5 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
 import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
@@ -41,7 +43,9 @@ class _ProfileBodyState extends State<_ProfileBody> {
   Map<String, dynamic>? _doctorProfile;
   List<Map<String, dynamic>> _doctorAvailability = const [];
   bool _isDoctorPracticeLoading = false;
+  bool _isDoctorPhotoUploading = false;
   String? _doctorPracticeError;
+  final ImagePicker _imagePicker = ImagePicker();
 
   bool get _isDoctorRole => widget.authProvider.role == 'doctor';
 
@@ -209,11 +213,145 @@ class _ProfileBodyState extends State<_ProfileBody> {
     }
   }
 
+  String _doctorAvatarUrl(AuthUser? user) {
+    if (_isDoctorRole) {
+      final doctorImageUrl =
+          _resolveImageUrl(_doctorProfile?['profile_image_url']?.toString());
+      if (doctorImageUrl.isNotEmpty) {
+        return doctorImageUrl;
+      }
+    }
+    return _resolveImageUrl(user?.avatarUrl);
+  }
+
+  Future<void> _pickAndUploadDoctorPhoto() async {
+    if (!_isDoctorRole || _isDoctorPhotoUploading) {
+      return;
+    }
+
+    final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (picked == null) {
+      return;
+    }
+
+    final fileSize = await picked.length();
+    if (!mounted) {
+      return;
+    }
+
+    if (fileSize > 2 * 1024 * 1024) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Photo must be less than 2MB.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isDoctorPhotoUploading = true;
+    });
+
+    try {
+      final api = sl<ApiClient>();
+      final bytes = await picked.readAsBytes();
+
+      final uploadResponse = await api.dio.post(
+        '/api/upload',
+        data: FormData.fromMap({
+          'file': MultipartFile.fromBytes(
+            bytes,
+            filename:
+                picked.name.isNotEmpty ? picked.name : 'doctor-profile.jpg',
+          ),
+        }),
+      );
+
+      final fileUrl = uploadResponse.data is Map<String, dynamic>
+          ? uploadResponse.data['fileUrl']?.toString() ?? ''
+          : '';
+
+      if (fileUrl.isEmpty) {
+        throw const FormatException('Upload URL missing');
+      }
+
+      var doctorId = _doctorProfile?['_id']?.toString() ?? '';
+      if (doctorId.isEmpty) {
+        await _loadDoctorPracticeData();
+        doctorId = _doctorProfile?['_id']?.toString() ?? '';
+      }
+
+      if (doctorId.isEmpty) {
+        throw const FormatException('Doctor profile not found');
+      }
+
+      await api.put(
+        '/api/doctors/$doctorId',
+        data: {
+          'profile_image_url': fileUrl,
+        },
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _doctorProfile = {
+          ...?_doctorProfile,
+          '_id': doctorId,
+          'profile_image_url': fileUrl,
+        };
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile photo updated successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      final message = error.response?.data is Map<String, dynamic>
+          ? error.response?.data['message']?.toString() ??
+              'Failed to update profile photo.'
+          : 'Failed to update profile photo.';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update profile photo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDoctorPhotoUploading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = widget.authProvider;
     final user = authProvider.user;
-    final avatarUrl = _resolveImageUrl(user?.avatarUrl);
+    final avatarUrl = _doctorAvatarUrl(user);
     final preferences = user?.notificationPreferences;
 
     final String initials = (user?.name?.isNotEmpty ?? false)
@@ -274,8 +412,51 @@ class _ProfileBodyState extends State<_ProfileBody> {
                                         ),
                                       ),
                               ),
+                              if (_isDoctorRole)
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Material(
+                                    color: AppColors.primary,
+                                    shape: const CircleBorder(),
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: _isDoctorPhotoUploading
+                                          ? null
+                                          : _pickAndUploadDoctorPhoto,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: _isDoctorPhotoUploading
+                                            ? const SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Colors.white,
+                                                ),
+                                              )
+                                            : const Icon(
+                                                Icons.camera_alt,
+                                                size: 16,
+                                                color: Colors.white,
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
+                          if (_isDoctorRole) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Tap camera icon to update photo',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 14),
                           Text(
                             user?.name ?? '—',

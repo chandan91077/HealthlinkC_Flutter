@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
 import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/core/network/api_client.dart';
+import 'package:healthlink_connect_flutter/core/utils/external_link_opener.dart';
 import 'package:healthlink_connect_flutter/shared/widgets/medi_connect_header_drawer.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -167,18 +168,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
 
     if (zoomUrl.isNotEmpty) {
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Video Link'),
-          content: SelectableText(zoomUrl),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
+      await openExternalLink(
+        context,
+        zoomUrl,
+        invalidMessage: 'Invalid video link.',
+        failureMessage: 'Unable to open video link.',
       );
       return;
     }
@@ -188,7 +182,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  IconData _iconForType(String type) {
+  bool _isEmergencyBooking(_NotificationItem notification) {
+    return notification.type == 'new_appointment' &&
+        notification.data['appointment_type']?.toString() == 'emergency';
+  }
+
+  IconData _iconForType(_NotificationItem notification) {
+    if (_isEmergencyBooking(notification)) {
+      return Icons.emergency;
+    }
+
+    final type = notification.type;
     switch (type) {
       case 'chat_available':
       case 'chat_available_confirmation':
@@ -204,6 +208,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
       case 'appointment_confirmed':
       case 'payment_pending':
         return Icons.check_circle_outline;
+      case 'new_appointment':
+        return Icons.event_available_outlined;
       case 'preempted':
         return Icons.priority_high;
       default:
@@ -211,7 +217,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  Color _colorForType(String type) {
+  Color _colorForType(_NotificationItem notification) {
+    if (_isEmergencyBooking(notification)) {
+      return Colors.red;
+    }
+
+    final type = notification.type;
     switch (type) {
       case 'chat_available':
       case 'chat_available_confirmation':
@@ -229,6 +240,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return Colors.red;
       case 'appointment_confirmed':
         return Colors.teal;
+      case 'new_appointment':
+        return Colors.indigo;
       case 'payment_pending':
         return Colors.orange;
       case 'preempted':
@@ -238,7 +251,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  String _titleForType(String type) {
+  String _titleForType(_NotificationItem notification) {
+    if (_isEmergencyBooking(notification)) {
+      return 'Emergency Booking';
+    }
+
+    final type = notification.type;
     switch (type) {
       case 'chat_available':
         return 'Chat Enabled';
@@ -258,6 +276,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return 'Video Session Ended';
       case 'appointment_confirmed':
         return 'Appointment Confirmed';
+      case 'new_appointment':
+        return 'New Appointment';
       case 'payment_pending':
         return 'Payment Pending';
       case 'preempted':
@@ -379,16 +399,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     child: ListTile(
                                       leading: CircleAvatar(
                                         backgroundColor:
-                                            _colorForType(notification.type)
+                                            _colorForType(notification)
                                                 .withValues(alpha: 0.2),
                                         child: Icon(
-                                          _iconForType(notification.type),
-                                          color:
-                                              _colorForType(notification.type),
+                                          _iconForType(notification),
+                                          color: _colorForType(notification),
                                         ),
                                       ),
                                       title: Text(
-                                        _titleForType(notification.type),
+                                        _titleForType(notification),
                                         style: TextStyle(
                                           fontWeight: notification.isUnread
                                               ? FontWeight.bold

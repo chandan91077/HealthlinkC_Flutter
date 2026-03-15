@@ -1,6 +1,10 @@
-﻿import 'package:dio/dio.dart';
+﻿import 'dart:async';
+
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
 import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/core/network/api_client.dart';
@@ -15,8 +19,10 @@ class DoctorDashboardPage extends StatefulWidget {
   State<DoctorDashboardPage> createState() => _DoctorDashboardPageState();
 }
 
-class _DoctorDashboardPageState extends State<DoctorDashboardPage> {
+class _DoctorDashboardPageState extends State<DoctorDashboardPage>
+    with WidgetsBindingObserver {
   bool _isLoading = true;
+  bool _isRefreshing = false;
   String? _error;
   Map<String, dynamic>? _doctorProfile;
   String _verificationStatus = 'pending';
@@ -25,18 +31,51 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage> {
   int _conversationCount = 0;
   int _unreadNotifications = 0;
   int _prescriptionCount = 0;
+  bool _isUploadingPhoto = false;
+  bool _isUploadingCertificate = false;
+  final ImagePicker _imagePicker = ImagePicker();
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadDashboard();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || _isLoading || _isRefreshing) {
+        return;
+      }
+      _loadDashboard(showLoader: false);
+    });
   }
 
-  Future<void> _loadDashboard() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _loadDashboard(showLoader: false);
+    }
+  }
+
+  Future<void> _loadDashboard({bool showLoader = true}) async {
+    if (_isRefreshing) {
+      return;
+    }
+
+    _isRefreshing = true;
+
+    if (showLoader && mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       final api = sl<ApiClient>();
@@ -90,16 +129,18 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage> {
         return;
       }
 
+      final unreadCount = (results[2].data is Map<String, dynamic>)
+          ? ((results[2].data as Map<String, dynamic>)['count'] as num? ?? 0)
+              .toInt()
+          : 0;
+
       setState(() {
         _doctorProfile = doctorProfile;
         _verificationStatus = verificationStatus;
         _rejectionReason = rejectionReason;
         _appointments = _mapList(results[0].data);
         _conversationCount = _mapList(results[1].data).length;
-        _unreadNotifications = (results[2].data is Map<String, dynamic>)
-            ? ((results[2].data as Map<String, dynamic>)['count'] as num? ?? 0)
-                .toInt()
-            : 0;
+        _unreadNotifications = unreadCount;
         _prescriptionCount = _mapList(results[3].data).length;
       });
     } on DioException catch (error) {
@@ -122,23 +163,30 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage> {
           _prescriptionCount = 0;
         });
       } else {
-        setState(() {
-          _error = 'Failed to load doctor dashboard.';
-        });
+        if (showLoader) {
+          setState(() {
+            _error = 'Failed to load doctor dashboard.';
+          });
+        }
       }
     } catch (_) {
       if (!mounted) {
         return;
       }
 
-      setState(() {
-        _error = 'Failed to load doctor dashboard.';
-      });
-    } finally {
-      if (mounted) {
+      if (showLoader) {
         setState(() {
-          _isLoading = false;
+          _error = 'Failed to load doctor dashboard.';
         });
+      }
+    } finally {
+      _isRefreshing = false;
+      if (mounted) {
+        if (showLoader) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -256,8 +304,302 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage> {
     }
   }
 
+  String _resolveImageUrl(String? rawUrl) {
+    final url = (rawUrl ?? '').trim();
+    if (url.isEmpty || url.toLowerCase() == 'null') {
+      return '';
+    }
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    try {
+      return Uri.parse(sl<ApiClient>().baseUrl).resolve(url).toString();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _doctorName() {
+    final authName = sl<AuthProvider>().user?.name?.trim() ?? '';
+    if (authName.isNotEmpty) {
+      final normalized =
+          authName.replaceFirst(RegExp(r'^dr\.?\s*', caseSensitive: false), '');
+      return 'Dr. ${normalized.isEmpty ? 'Doctor' : normalized}';
+    }
+    return 'Dr. Doctor';
+  }
+
+  String _doctorInitials() {
+    final name = sl<AuthProvider>().user?.name?.trim() ?? '';
+    if (name.isEmpty) {
+      return 'D';
+    }
+
+    final initials = name
+        .split(' ')
+        .where((part) => part.trim().isNotEmpty)
+        .map((part) => part.trim()[0].toUpperCase())
+        .take(2)
+        .join();
+    return initials.isEmpty ? 'D' : initials;
+  }
+
+  Future<void> _handlePhotoUpload() async {
+    if (_isUploadingPhoto) {
+      return;
+    }
+
+    final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (picked == null) {
+      return;
+    }
+
+    final size = await picked.length();
+    if (!mounted) {
+      return;
+    }
+
+    if (size > 2 * 1024 * 1024) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Photo must be less than 2MB.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final doctorId = _doctorProfile?['_id']?.toString() ??
+        _doctorProfile?['id']?.toString() ??
+        '';
+    if (doctorId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Doctor profile not found.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isUploadingPhoto = true;
+    });
+
+    try {
+      final api = sl<ApiClient>();
+      final uploadResponse = await api.dio.post(
+        '/api/upload',
+        data: FormData.fromMap({
+          'file': await MultipartFile.fromFile(
+            picked.path,
+            filename: picked.name,
+          ),
+        }),
+      );
+
+      final fileUrl = uploadResponse.data is Map<String, dynamic>
+          ? uploadResponse.data['fileUrl']?.toString() ?? ''
+          : '';
+
+      if (fileUrl.isEmpty) {
+        throw const FormatException('Upload URL missing');
+      }
+
+      await api.put(
+        '/api/doctors/$doctorId',
+        data: {'profile_image_url': fileUrl},
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _doctorProfile = {
+          ...?_doctorProfile,
+          'profile_image_url': fileUrl,
+        };
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile photo updated successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      final message = error.response?.data is Map<String, dynamic>
+          ? error.response?.data['message']?.toString() ??
+              'Failed to update profile photo.'
+          : 'Failed to update profile photo.';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update profile photo.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingPhoto = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleCertificateUpload() async {
+    if (_isUploadingCertificate) {
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final picked = result.files.first;
+    final path = picked.path;
+    if (path == null || path.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to access selected certificate file.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final doctorId = _doctorProfile?['_id']?.toString() ??
+        _doctorProfile?['id']?.toString() ??
+        '';
+    if (doctorId.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Doctor profile not found.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isUploadingCertificate = true;
+    });
+
+    try {
+      final api = sl<ApiClient>();
+      final uploadResponse = await api.dio.post(
+        '/api/upload',
+        data: FormData.fromMap({
+          'file': await MultipartFile.fromFile(
+            path,
+            filename:
+                picked.name.isNotEmpty ? picked.name : 'doctor-certificate',
+          ),
+        }),
+      );
+
+      final fileUrl = uploadResponse.data is Map<String, dynamic>
+          ? uploadResponse.data['fileUrl']?.toString() ?? ''
+          : '';
+
+      if (fileUrl.isEmpty) {
+        throw const FormatException('Upload URL missing');
+      }
+
+      await api.put(
+        '/api/doctors/$doctorId',
+        data: {'medical_license_url': fileUrl},
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _doctorProfile = {
+          ...?_doctorProfile,
+          'medical_license_url': fileUrl,
+        };
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Certificate uploaded successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      final message = error.response?.data is Map<String, dynamic>
+          ? error.response?.data['message']?.toString() ??
+              'Failed to upload certificate.'
+          : 'Failed to upload certificate.';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to upload certificate.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingCertificate = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final avatarUrl =
+        _resolveImageUrl(_doctorProfile?['profile_image_url']?.toString());
+    final doctorName = _doctorName();
+    final specialization =
+        _doctorProfile?['specialization']?.toString().trim() ?? '';
+
     final quickActions = [
       _DoctorAction(
           'Appointments',
@@ -327,19 +669,151 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage> {
                                     ],
                                   ),
                                 ),
-                                child: const Column(
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Doctor Dashboard',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.w700)),
-                                    SizedBox(height: 8),
-                                    Text(
-                                        'Track appointments, patients, conversations, and earnings in one place.',
-                                        style: TextStyle(
-                                            color: Color(0xFFE6FFFA))),
+                                    Row(
+                                      children: [
+                                        Stack(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 34,
+                                              backgroundColor:
+                                                  Colors.white.withValues(
+                                                alpha: 0.2,
+                                              ),
+                                              backgroundImage:
+                                                  avatarUrl.isNotEmpty
+                                                      ? NetworkImage(avatarUrl)
+                                                      : null,
+                                              child: avatarUrl.isEmpty
+                                                  ? Text(
+                                                      _doctorInitials(),
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 22,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                    )
+                                                  : null,
+                                            ),
+                                            Positioned(
+                                              right: 0,
+                                              bottom: 0,
+                                              child: Material(
+                                                color: Colors.black54,
+                                                shape: const CircleBorder(),
+                                                child: InkWell(
+                                                  customBorder:
+                                                      const CircleBorder(),
+                                                  onTap: _isUploadingPhoto
+                                                      ? null
+                                                      : _handlePhotoUpload,
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(6),
+                                                    child: _isUploadingPhoto
+                                                        ? const SizedBox(
+                                                            width: 14,
+                                                            height: 14,
+                                                            child:
+                                                                CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                          )
+                                                        : const Icon(
+                                                            Icons.camera_alt,
+                                                            size: 14,
+                                                            color: Colors.white,
+                                                          ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                doctorName,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              if (specialization.isNotEmpty)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                    top: 4,
+                                                  ),
+                                                  child: Text(
+                                                    specialization,
+                                                    style: const TextStyle(
+                                                      color: Color(0xFFE6FFFA),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    const Text(
+                                      'Track appointments, patients, conversations, and earnings in one place.',
+                                      style:
+                                          TextStyle(color: Color(0xFFE6FFFA)),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          onPressed: _isUploadingCertificate
+                                              ? null
+                                              : _handleCertificateUpload,
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(
+                                                color: Colors.white70),
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          icon: _isUploadingCertificate
+                                              ? const SizedBox(
+                                                  width: 14,
+                                                  height: 14,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: Colors.white,
+                                                  ),
+                                                )
+                                              : const Icon(
+                                                  Icons.verified_outlined,
+                                                  size: 16,
+                                                ),
+                                          label: Text(
+                                            (_doctorProfile?[
+                                                            'medical_license_url']
+                                                        ?.toString()
+                                                        .trim()
+                                                        .isNotEmpty ??
+                                                    false)
+                                                ? 'Update Certificate'
+                                                : 'Upload Certificate',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
@@ -574,6 +1048,61 @@ class _DoctorQueueCard extends StatelessWidget {
   final Map<String, dynamic> appointment;
   final Future<void> Function(String appointmentId) onMarkDone;
 
+  Future<void> _confirmAndMarkDone(
+    BuildContext context,
+    String appointmentId,
+    String patientName,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        var isSubmitting = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Mark appointment as done?'),
+              content: Text(
+                'This will mark $patientName\'s appointment as completed.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            isSubmitting = true;
+                          });
+
+                          await onMarkDone(appointmentId);
+
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).pop();
+                          }
+                        },
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Confirm'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final patient = appointment['patient_id'];
@@ -589,33 +1118,65 @@ class _DoctorQueueCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.person)),
-        title: Text(patientName),
-        subtitle: Text('$time • ${status.toUpperCase()}'),
-        trailing: Wrap(
-          spacing: 8,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () {
-                if (appointmentId.isNotEmpty) {
-                  context.push(AppRoutes.chat);
-                } else {
-                  context.go(AppRoutes.appointments);
-                }
-              },
-              child: const Text('Open'),
+            Row(
+              children: [
+                const CircleAvatar(child: Icon(Icons.person)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        patientName,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$time • ${status.toUpperCase()}',
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            if (canMarkDone)
-              OutlinedButton(
-                onPressed: () => onMarkDone(appointmentId),
-                child: const Text('Mark Done'),
-              ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {
+                      if (appointmentId.isNotEmpty) {
+                        context.push('/chat/$appointmentId');
+                      } else {
+                        context.go(AppRoutes.appointments);
+                      }
+                    },
+                    child: const Text('Open'),
+                  ),
+                ),
+                if (canMarkDone) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _confirmAndMarkDone(
+                          context, appointmentId, patientName),
+                      child: const Text('Mark Done'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
       ),

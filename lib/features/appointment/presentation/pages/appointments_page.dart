@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -19,21 +21,30 @@ class AppointmentsPage extends StatefulWidget {
 }
 
 class _AppointmentsPageState extends State<AppointmentsPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   bool _isLoading = true;
+  bool _isRefreshing = false;
   String? _error;
   List<Map<String, dynamic>> _appointments = const [];
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(
       length: 2,
       vsync: this,
       initialIndex: _initialTabIndex(widget.initialTab),
     );
     _loadAppointments();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || _isLoading || _isRefreshing) {
+        return;
+      }
+      _loadAppointments(showLoader: false);
+    });
   }
 
   int _initialTabIndex(String? tab) {
@@ -49,15 +60,32 @@ class _AppointmentsPageState extends State<AppointmentsPage>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoRefreshTimer?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadAppointments() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _loadAppointments(showLoader: false);
+    }
+  }
+
+  Future<void> _loadAppointments({bool showLoader = true}) async {
+    if (_isRefreshing) {
+      return;
+    }
+
+    _isRefreshing = true;
+
+    if (showLoader && mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
     try {
       final response = await sl<ApiClient>().get('/api/appointments');
       final data = response.data;
@@ -77,14 +105,19 @@ class _AppointmentsPageState extends State<AppointmentsPage>
       if (!mounted) {
         return;
       }
-      setState(() {
-        _error = 'Failed to load appointments.';
-      });
-    } finally {
-      if (mounted) {
+      if (showLoader) {
         setState(() {
-          _isLoading = false;
+          _error = 'Failed to load appointments.';
         });
+      }
+    } finally {
+      _isRefreshing = false;
+      if (mounted) {
+        if (showLoader) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -181,6 +214,67 @@ class _AppointmentList extends StatelessWidget {
   final List<Map<String, dynamic>> appointments;
   final String role;
   final Future<void> Function() onAppointmentsChanged;
+
+  Future<void> _confirmAndMarkDone(
+    BuildContext context,
+    String appointmentId,
+    String otherPartyName,
+  ) async {
+    final shouldMarkDone = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Mark appointment as done?'),
+              content: Text(
+                'This will mark $otherPartyName\'s appointment as completed.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Confirm'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!shouldMarkDone || appointmentId.isEmpty) {
+      return;
+    }
+
+    try {
+      await sl<ApiClient>().put(
+        '/api/appointments/$appointmentId',
+        data: {'status': 'completed'},
+      );
+
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Appointment marked as completed.')),
+      );
+
+      await onAppointmentsChanged();
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to mark appointment as completed.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -292,6 +386,17 @@ class _AppointmentList extends StatelessWidget {
                       OutlinedButton(
                         onPressed: () => context.push('/chat/$appointmentId'),
                         child: const Text('Open Chat'),
+                      ),
+                    if (role == 'doctor' &&
+                        appointmentId.isNotEmpty &&
+                        status == 'confirmed')
+                      OutlinedButton(
+                        onPressed: () => _confirmAndMarkDone(
+                          context,
+                          appointmentId,
+                          otherPartyName,
+                        ),
+                        child: const Text('Mark Done'),
                       ),
                   ],
                 ),

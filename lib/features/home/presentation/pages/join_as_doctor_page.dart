@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
+import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 import 'package:healthlink_connect_flutter/shared/widgets/medi_connect_header_drawer.dart';
 
 class JoinAsDoctorPage extends StatelessWidget {
@@ -11,6 +13,8 @@ class JoinAsDoctorPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLoggedIn = context.watch<AuthProvider>().isAuthenticated;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const MediConnectHeader(),
@@ -68,21 +72,22 @@ class JoinAsDoctorPage extends StatelessWidget {
                 'Set your availability, consultation slots, and fee preferences at your convenience.',
           ),
           const SizedBox(height: 14),
-          ElevatedButton(
-            onPressed: () {
-              context.go('${AppRoutes.register}?role=doctor');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _teal,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              elevation: 0,
+          if (!isLoggedIn)
+            ElevatedButton(
+              onPressed: () {
+                context.go('${AppRoutes.register}?role=doctor');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _teal,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                elevation: 0,
+              ),
+              child: const Text('Apply Now',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
             ),
-            child: const Text('Apply Now',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-          ),
         ],
       ),
     );

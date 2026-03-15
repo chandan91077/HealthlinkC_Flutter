@@ -236,6 +236,72 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
     }
   }
 
+  Future<void> _showCertificateSheet() async {
+    final certificateUrl =
+        _resolveImageUrl(_doctor?['medical_license_url']?.toString());
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Doctor Certificate',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                if (certificateUrl.isEmpty)
+                  const Text('Certificate is not available.')
+                else ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: InteractiveViewer(
+                      maxScale: 4,
+                      child: Image.network(
+                        certificateUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Container(
+                          padding: const EdgeInsets.all(16),
+                          color: Colors.grey.shade100,
+                          child: const Text(
+                            'Certificate preview is not available as image.',
+                            style: TextStyle(color: Colors.black54),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Pinch to zoom certificate image.',
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _confirmBooking() async {
     if (_selectedSlot.isEmpty || _doctor == null) {
       return;
@@ -301,7 +367,10 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       user is Map<String, dynamic> ? user['full_name']?.toString() : null,
     );
     final avatarUrl = _resolveImageUrl(
-      user is Map<String, dynamic> ? user['avatar_url']?.toString() : null,
+      _doctor?['profile_image_url']?.toString() ??
+          (user is Map<String, dynamic>
+              ? user['avatar_url']?.toString()
+              : null),
     );
     final specialization = _doctor?['specialization']?.toString() ?? 'General';
     final consultationFee = _appointmentType == 'emergency'
@@ -355,6 +424,15 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                             ],
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: _showCertificateSheet,
+                          icon: const Icon(Icons.verified_outlined),
+                          label: const Text('View Certificate'),
+                        ),
                       ),
                       const SizedBox(height: 32),
 

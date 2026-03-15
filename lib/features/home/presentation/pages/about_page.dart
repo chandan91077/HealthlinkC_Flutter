@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
+import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 import 'package:healthlink_connect_flutter/features/doctor/presentation/pages/specializations_page.dart';
 import 'package:healthlink_connect_flutter/features/home/presentation/pages/benefits_page.dart';
 import 'package:healthlink_connect_flutter/features/home/presentation/pages/contact_page.dart';
@@ -352,6 +354,8 @@ class AboutPage extends StatelessWidget {
   }
 
   Widget _buildCta(BuildContext context) {
+    final isLoggedIn = context.watch<AuthProvider>().isAuthenticated;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
@@ -394,21 +398,23 @@ class AboutPage extends StatelessWidget {
                       style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.go(AppRoutes.register),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white60),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+              if (!isLoggedIn) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => context.go(AppRoutes.register),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white60),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Sign Up Free',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
-                  child: const Text('Sign Up Free',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
-              ),
+              ],
             ],
           ),
         ],

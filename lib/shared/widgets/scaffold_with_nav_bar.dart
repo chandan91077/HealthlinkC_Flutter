@@ -18,6 +18,8 @@ class ScaffoldWithNavBar extends StatefulWidget {
 
 class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
   final List<int> _tabHistory = <int>[];
+  DateTime? _lastExitAttemptAt;
+  static const Duration _exitConfirmWindow = Duration(seconds: 2);
 
   Future<bool> _handleBackNavigation() async {
     // 1. Try popping a route pushed via Navigator.push on the root navigator
@@ -53,7 +55,23 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
   Future<bool> _onBackButtonPressed() async {
     final shouldExit = await _handleBackNavigation();
     if (shouldExit && mounted) {
-      await SystemNavigator.pop();
+      final now = DateTime.now();
+      final recentAttempt = _lastExitAttemptAt != null &&
+          now.difference(_lastExitAttemptAt!) <= _exitConfirmWindow;
+
+      if (recentAttempt) {
+        await SystemNavigator.pop();
+      } else {
+        _lastExitAttemptAt = now;
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Press again to exit app'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
     return true;
   }

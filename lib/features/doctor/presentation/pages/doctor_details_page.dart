@@ -244,7 +244,10 @@ class _DoctorDetailsPageState extends State<DoctorDetailsPage> {
         ? user['email']?.toString() ?? 'N/A'
         : 'N/A';
     final avatarUrl = _resolveImageUrl(
-      user is Map<String, dynamic> ? user['avatar_url']?.toString() : null,
+      _doctor?['profile_image_url']?.toString() ??
+          (user is Map<String, dynamic>
+              ? user['avatar_url']?.toString()
+              : null),
     );
 
     return Scaffold(

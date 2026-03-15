@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:healthlink_connect_flutter/core/config/env.dart';
 import 'package:healthlink_connect_flutter/core/network/api_client.dart';
 import 'package:healthlink_connect_flutter/core/providers/app_preferences_provider.dart';
+import 'package:healthlink_connect_flutter/core/services/local_notification_service.dart';
 import 'package:healthlink_connect_flutter/features/auth/data/repositories/auth_repository.dart';
 import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 
@@ -12,6 +13,7 @@ Future<void> configureDependencies() async {
   // External
   sl.registerLazySingleton(() => const FlutterSecureStorage());
   sl.registerLazySingleton(() => ApiClient(baseUrl: Env.apiBaseUrl));
+  sl.registerLazySingleton(() => LocalNotificationService());
 
   // Features
   _initAuth();

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
+import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -31,7 +33,7 @@ class HomePage extends StatelessWidget {
           const SizedBox(height: 20),
           _buildSectionTitle('How It Works'),
           const SizedBox(height: 10),
-          _buildHowItWorksSection(),
+          _buildHowItWorksSection(context),
           const SizedBox(height: 20),
           _buildContactSection(),
         ],
@@ -40,6 +42,8 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildHeroSection(BuildContext context) {
+    final isLoggedIn = context.watch<AuthProvider>().isAuthenticated;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
       decoration: BoxDecoration(
@@ -93,22 +97,24 @@ class HomePage extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => context.go(AppRoutes.register),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6A3D),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
+              if (!isLoggedIn) ...[
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => context.go(AppRoutes.register),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6A3D),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                    child: const Text('Get Started Free',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
-                  child: const Text('Get Started Free',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
-              ),
-              const SizedBox(width: 10),
+                const SizedBox(width: 10),
+              ],
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => context.go(AppRoutes.doctors),
@@ -281,9 +287,11 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildHowItWorksSection() {
+  Widget _buildHowItWorksSection(BuildContext context) {
+    final isLoggedIn = context.watch<AuthProvider>().isAuthenticated;
+
     final List<({String number, String title})> steps = [
-      (number: '1', title: 'Sign Up'),
+      (number: '1', title: isLoggedIn ? 'Account Ready' : 'Sign Up'),
       (number: '2', title: 'Find Doctor'),
       (number: '3', title: 'Book Appointment'),
       (number: '4', title: 'Get Consultation'),

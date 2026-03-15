@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -15,25 +17,57 @@ class PatientDashboardPage extends StatefulWidget {
   State<PatientDashboardPage> createState() => _PatientDashboardPageState();
 }
 
-class _PatientDashboardPageState extends State<PatientDashboardPage> {
+class _PatientDashboardPageState extends State<PatientDashboardPage>
+    with WidgetsBindingObserver {
   bool _isLoading = true;
+  bool _isRefreshing = false;
   String? _error;
   List<Map<String, dynamic>> _appointments = const [];
   int _prescriptionCount = 0;
   int _conversationCount = 0;
   int _unreadNotifications = 0;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadDashboard();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || _isLoading || _isRefreshing) {
+        return;
+      }
+      _loadDashboard(showLoader: false);
+    });
   }
 
-  Future<void> _loadDashboard() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _loadDashboard(showLoader: false);
+    }
+  }
+
+  Future<void> _loadDashboard({bool showLoader = true}) async {
+    if (_isRefreshing) {
+      return;
+    }
+
+    _isRefreshing = true;
+
+    if (showLoader && mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       final api = sl<ApiClient>();
@@ -66,14 +100,19 @@ class _PatientDashboardPageState extends State<PatientDashboardPage> {
       if (!mounted) {
         return;
       }
-      setState(() {
-        _error = 'Failed to load dashboard data.';
-      });
-    } finally {
-      if (mounted) {
+      if (showLoader) {
         setState(() {
-          _isLoading = false;
+          _error = 'Failed to load dashboard data.';
         });
+      }
+    } finally {
+      _isRefreshing = false;
+      if (mounted) {
+        if (showLoader) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -147,7 +186,7 @@ class _PatientDashboardPageState extends State<PatientDashboardPage> {
         title: 'Chat with Doctors',
         icon: Icons.chat_bubble_outline,
         caption: '$_conversationCount active chats',
-        onTap: () => context.push(AppRoutes.chat),
+        onTap: () => context.go(AppRoutes.chat),
       ),
       _DashboardAction(
         title: 'Notifications',

@@ -3,11 +3,12 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/core/network/api_client.dart';
 import 'package:healthlink_connect_flutter/core/theme/app_colors.dart';
+import 'package:healthlink_connect_flutter/core/utils/external_link_opener.dart';
 import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 
 class ChatPage extends StatefulWidget {
@@ -109,11 +110,15 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _loadMessagesSilently() async {
     try {
-      final response = await sl<ApiClient>().get(
-        '/api/messages/conversation',
-        queryParameters: {'appointment_id': widget.conversationId},
-      );
-      final messagesData = response.data;
+      final responses = await Future.wait([
+        sl<ApiClient>().get(
+          '/api/messages/conversation',
+          queryParameters: {'appointment_id': widget.conversationId},
+        ),
+        sl<ApiClient>().get('/api/appointments/${widget.conversationId}'),
+      ]);
+
+      final messagesData = responses[0].data;
       final parsedMessages = messagesData is List
           ? messagesData
               .whereType<Map>()
@@ -121,11 +126,19 @@ class _ChatPageState extends State<ChatPage> {
               .toList()
           : <Map<String, dynamic>>[];
 
+      final appointmentData = responses[1].data;
+      final appointmentMap = appointmentData is Map<String, dynamic>
+          ? appointmentData
+          : appointmentData is Map
+              ? appointmentData.map((k, v) => MapEntry(k.toString(), v))
+              : <String, dynamic>{};
+
       if (!mounted) {
         return;
       }
       setState(() {
         _messages = parsedMessages;
+        _appointment = appointmentMap;
       });
       await _markRead();
     } catch (_) {}
@@ -344,21 +357,20 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  Future<void> _openLink(String raw) async {
-    final uri = Uri.tryParse(raw);
-    if (uri == null) {
-      return;
-    }
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Unable to open link.')));
-    }
-  }
-
   Future<void> _joinCall() async {
     final messenger = ScaffoldMessenger.of(context);
-    final zoomLink = _appointment?['zoom_join_url']?.toString() ?? '';
+    final video = _appointment?['video'];
+    final doctorLink =
+        video is Map ? (video['doctorJoinUrl']?.toString() ?? '') : '';
+    final patientLink =
+        video is Map ? (video['patientJoinUrl']?.toString() ?? '') : '';
+    final zoomLink = _isDoctor
+        ? (doctorLink.isNotEmpty
+            ? doctorLink
+            : (_appointment?['zoom_join_url']?.toString() ?? ''))
+        : (patientLink.isNotEmpty
+            ? patientLink
+            : (_appointment?['zoom_join_url']?.toString() ?? ''));
 
     if (!_videoUnlocked || zoomLink.isEmpty) {
       messenger.showSnackBar(
@@ -373,7 +385,12 @@ class _ChatPageState extends State<ChatPage> {
               '/api/appointments/${widget.conversationId}/doctor-join-call',
             );
       }
-      await _openLink(zoomLink);
+      await openExternalLink(
+        context,
+        zoomLink,
+        invalidMessage: 'Invalid video link.',
+        failureMessage: 'Unable to open link.',
+      );
       await _loadChatData();
     } catch (_) {
       if (!mounted) {
@@ -401,7 +418,7 @@ class _ChatPageState extends State<ChatPage> {
             '/api/appointments/${widget.conversationId}/doctor-leave-call',
           );
 
-      await sl<ApiClient>().put(
+      final response = await sl<ApiClient>().put(
         '/api/appointments/${widget.conversationId}/permissions',
         data: {
           'chat_unlocked': _chatUnlocked,
@@ -414,7 +431,18 @@ class _ChatPageState extends State<ChatPage> {
         },
       );
 
-      await _loadChatData();
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        setState(() {
+          _appointment = data;
+        });
+      } else if (data is Map) {
+        setState(() {
+          _appointment = data.map((k, v) => MapEntry(k.toString(), v));
+        });
+      }
+
+      await _loadMessagesSilently();
       if (!mounted) {
         return;
       }
@@ -477,7 +505,18 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _callActionsCard() {
-    final zoomLink = _appointment?['zoom_join_url']?.toString() ?? '';
+    final video = _appointment?['video'];
+    final doctorLink =
+        video is Map ? (video['doctorJoinUrl']?.toString() ?? '') : '';
+    final patientLink =
+        video is Map ? (video['patientJoinUrl']?.toString() ?? '') : '';
+    final zoomLink = _isDoctor
+        ? (doctorLink.isNotEmpty
+            ? doctorLink
+            : (_appointment?['zoom_join_url']?.toString() ?? ''))
+        : (patientLink.isNotEmpty
+            ? patientLink
+            : (_appointment?['zoom_join_url']?.toString() ?? ''));
     final hasJoin = _videoUnlocked && zoomLink.isNotEmpty;
 
     return Container(
@@ -535,6 +574,28 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _showDoctorActions() async {
+    try {
+      final response = await sl<ApiClient>().get(
+        '/api/appointments/${widget.conversationId}',
+      );
+      final data = response.data;
+      final latestAppointment = data is Map<String, dynamic>
+          ? data
+          : data is Map
+              ? data.map((k, v) => MapEntry(k.toString(), v))
+              : <String, dynamic>{};
+
+      if (mounted) {
+        setState(() {
+          _appointment = latestAppointment;
+          _zoomLinkController.text =
+              latestAppointment['zoom_join_url']?.toString() ?? '';
+          _meetingTimeController.text =
+              latestAppointment['meeting_time']?.toString() ?? '';
+        });
+      }
+    } catch (_) {}
+
     bool chatUnlocked = _chatUnlocked;
     bool videoUnlocked = _videoUnlocked;
     bool autoSend = true;
@@ -597,8 +658,6 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                         items: const [
                           DropdownMenuItem(value: 'zoom', child: Text('Zoom')),
-                          DropdownMenuItem(
-                              value: 'meet', child: Text('Google Meet')),
                         ],
                         onChanged: (value) {
                           if (value == null) {
@@ -613,7 +672,8 @@ class _ChatPageState extends State<ChatPage> {
                       TextField(
                         controller: _zoomLinkController,
                         decoration: const InputDecoration(
-                          labelText: 'Video Link (optional)',
+                          labelText:
+                              'Video Link (enter optional, auto-generated if empty)',
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -644,17 +704,37 @@ class _ChatPageState extends State<ChatPage> {
                               : () async {
                                   final messenger =
                                       ScaffoldMessenger.of(this.context);
+                                  final zoomLink =
+                                      _zoomLinkController.text.trim();
+                                  final parsedZoomLink = Uri.tryParse(zoomLink);
+                                  final hasValidZoomLink = parsedZoomLink !=
+                                          null &&
+                                      (parsedZoomLink.scheme == 'https' ||
+                                          parsedZoomLink.scheme == 'http') &&
+                                      parsedZoomLink.host.isNotEmpty;
+
+                                  if (zoomLink.isNotEmpty &&
+                                      !hasValidZoomLink) {
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Please enter a valid video link (http/https).',
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+
                                   setState(() {
                                     _isUpdatingPermissions = true;
                                   });
                                   try {
-                                    await sl<ApiClient>().put(
+                                    final response = await sl<ApiClient>().put(
                                       '/api/appointments/${widget.conversationId}/permissions',
                                       data: {
                                         'chat_unlocked': chatUnlocked,
                                         'video_unlocked': videoUnlocked,
-                                        'zoom_join_url':
-                                            _zoomLinkController.text.trim(),
+                                        'zoom_join_url': zoomLink,
                                         'meeting_provider': provider,
                                         'meeting_time':
                                             _meetingTimeController.text.trim(),
@@ -662,11 +742,23 @@ class _ChatPageState extends State<ChatPage> {
                                       },
                                     );
 
+                                    final data = response.data;
+                                    if (data is Map<String, dynamic>) {
+                                      setState(() {
+                                        _appointment = data;
+                                      });
+                                    } else if (data is Map) {
+                                      setState(() {
+                                        _appointment = data.map((k, v) =>
+                                            MapEntry(k.toString(), v));
+                                      });
+                                    }
+
                                     if (sheetContext.mounted) {
                                       Navigator.of(sheetContext).pop();
                                     }
 
-                                    await _loadChatData();
+                                    await _loadMessagesSilently();
                                     if (!mounted) {
                                       return;
                                     }
@@ -675,6 +767,19 @@ class _ChatPageState extends State<ChatPage> {
                                         content: Text(
                                             'Doctor chat actions updated.'),
                                       ),
+                                    );
+                                  } on DioException catch (error) {
+                                    if (!mounted) {
+                                      return;
+                                    }
+                                    final message = error.response?.data
+                                            is Map<String, dynamic>
+                                        ? error.response?.data['message']
+                                                ?.toString() ??
+                                            'Failed to update doctor actions.'
+                                        : 'Failed to update doctor actions.';
+                                    messenger.showSnackBar(
+                                      SnackBar(content: Text(message)),
                                     );
                                   } catch (_) {
                                     if (!mounted) {
@@ -716,7 +821,63 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _messageBubble(Map<String, dynamic> message) {
+  DateTime? _messageDateTime(Map<String, dynamic> message) {
+    final raw = message['createdAt']?.toString() ??
+        message['created_at']?.toString() ??
+        '';
+    if (raw.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(raw)?.toLocal();
+  }
+
+  bool _isSameCalendarDate(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  String _dayLabel(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final messageDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+    if (_isSameCalendarDate(messageDay, today)) {
+      return 'Today';
+    }
+    if (_isSameCalendarDate(messageDay, yesterday)) {
+      return 'Yesterday';
+    }
+    return DateFormat('dd MMM yyyy').format(messageDay);
+  }
+
+  String _timeLabel(DateTime dateTime) {
+    return DateFormat('hh:mm a').format(dateTime);
+  }
+
+  Widget _dateSeparator(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _messageBubble(Map<String, dynamic> message, {DateTime? timestamp}) {
     final mine = _isMine(message);
     final type = message['message_type']?.toString() ?? 'text';
     final content = message['content']?.toString() ?? '';
@@ -736,7 +897,12 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 if (type == 'image' && fileUrl.isNotEmpty)
                   GestureDetector(
-                    onTap: () => _openLink(fileUrl),
+                    onTap: () => openExternalLink(
+                      context,
+                      fileUrl,
+                      invalidMessage: 'Invalid file link.',
+                      failureMessage: 'Unable to open link.',
+                    ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(
@@ -753,7 +919,12 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 if (type == 'file' && fileUrl.isNotEmpty)
                   InkWell(
-                    onTap: () => _openLink(fileUrl),
+                    onTap: () => openExternalLink(
+                      context,
+                      fileUrl,
+                      invalidMessage: 'Invalid file link.',
+                      failureMessage: 'Unable to open link.',
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -777,6 +948,16 @@ class _ChatPageState extends State<ChatPage> {
                     content,
                     style:
                         TextStyle(color: mine ? Colors.white : Colors.black87),
+                  ),
+                ],
+                if (timestamp != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    _timeLabel(timestamp),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: mine ? Colors.white70 : Colors.black54,
+                    ),
                   ),
                 ],
               ],
@@ -926,7 +1107,49 @@ class _ChatPageState extends State<ChatPage> {
                               padding: const EdgeInsets.all(12),
                               itemCount: _messages.length,
                               itemBuilder: (context, index) {
-                                return _messageBubble(_messages[index]);
+                                final message = _messages[index];
+                                final currentDateTime =
+                                    _messageDateTime(message);
+                                final currentMine = _isMine(message);
+                                DateTime? previousDateTime;
+                                bool sameSenderAsPrevious = false;
+                                if (index > 0) {
+                                  final previousMessage = _messages[index - 1];
+                                  previousDateTime =
+                                      _messageDateTime(previousMessage);
+                                  sameSenderAsPrevious =
+                                      currentMine == _isMine(previousMessage);
+                                }
+
+                                final showDateSection = currentDateTime !=
+                                        null &&
+                                    (previousDateTime == null ||
+                                        !_isSameCalendarDate(
+                                            previousDateTime, currentDateTime));
+
+                                final double topSpacing;
+                                if (index == 0 || showDateSection) {
+                                  topSpacing = 0;
+                                } else if (sameSenderAsPrevious) {
+                                  topSpacing = 2;
+                                } else {
+                                  topSpacing = 8;
+                                }
+
+                                return Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    if (showDateSection)
+                                      _dateSeparator(
+                                          _dayLabel(currentDateTime)),
+                                    SizedBox(height: topSpacing),
+                                    _messageBubble(
+                                      message,
+                                      timestamp: currentDateTime,
+                                    ),
+                                  ],
+                                );
                               },
                             ),
                     ),
