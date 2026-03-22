@@ -58,11 +58,11 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
-            isMinifyEnabled = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            // Disabled until confirmed stable — R8 was stripping essential Flutter/Firebase
+            // plugin classes even with proguard-rules.pro in place, causing instant crash
+            // on Play Store. Re-enable once crash is confirmed fixed.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

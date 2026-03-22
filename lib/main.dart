@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:healthlink_connect_flutter/app.dart';
@@ -5,22 +6,45 @@ import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/core/config/env.dart';
 import 'package:healthlink_connect_flutter/core/services/local_notification_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  // Catch ALL uncaught async errors that would otherwise silently kill the app
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase must be initialized first – before any other Firebase service
-  await Firebase.initializeApp();
+    // 1. Firebase must come first — it must succeed for FCM to work.
+    //    Wrap in try/catch so a SHA-1 mismatch doesn't crash the entire app.
+    try {
+      await Firebase.initializeApp();
+    } catch (e) {
+      debugPrint('[MediConnect] Firebase.initializeApp failed: $e');
+      // App will run without Firebase (notifications won't work, but it won't crash)
+    }
 
-  await Env.load();
-  await configureDependencies();
+    // 2. Load .env — critical for API_BASE_URL.  Wrapped so a missing/corrupt
+    //    asset file on Play Store does NOT crash the app.
+    try {
+      await Env.load();
+    } catch (e) {
+      debugPrint('[MediConnect] Env.load failed: $e');
+    }
 
-  // Notification init may fail if permissions are denied (e.g. first launch
-  // on Android 13+). Wrap to prevent a hard crash on the Play Store build.
-  try {
-    await sl<LocalNotificationService>().initialize();
-  } catch (_) {
-    // Non-fatal: app continues without local notifications
-  }
+    // 3. Dependency injection
+    try {
+      await configureDependencies();
+    } catch (e) {
+      debugPrint('[MediConnect] configureDependencies failed: $e');
+    }
 
-  runApp(const App());
+    // 4. Local notifications — non-critical, must never crash startup
+    try {
+      await sl<LocalNotificationService>().initialize();
+    } catch (e) {
+      debugPrint('[MediConnect] LocalNotificationService.initialize failed: $e');
+    }
+
+    runApp(const App());
+  }, (error, stack) {
+    // Global error zone — log and swallow so the app doesn't hard-crash
+    debugPrint('[MediConnect] Uncaught error: $error\n$stack');
+  });
 }
