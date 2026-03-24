@@ -22,6 +22,15 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
   static const Duration _exitConfirmWindow = Duration(seconds: 2);
 
   Future<bool> _handleBackNavigation() async {
+    final currentRoute = ModalRoute.of(context);
+    final isAtHomeRoot = widget.navigationShell.currentIndex == 0 &&
+        _tabHistory.isEmpty &&
+        (currentRoute?.isFirst ?? true);
+
+    if (isAtHomeRoot) {
+      return true;
+    }
+
     // 1. Try popping a route pushed via Navigator.push on the root navigator
     final rootNavigator = Navigator.of(context, rootNavigator: true);
     if (rootNavigator.canPop()) {

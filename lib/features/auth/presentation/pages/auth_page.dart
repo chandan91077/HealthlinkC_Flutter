@@ -272,6 +272,10 @@ class _AuthPageState extends State<AuthPage> {
             isLoading: authProvider.isLoading,
           ),
         ),
+        const SizedBox(height: 16),
+        _buildGoogleDivider(),
+        const SizedBox(height: 16),
+        _buildGoogleButton(role: 'patient'),
       ],
     );
   }
@@ -302,7 +306,7 @@ class _AuthPageState extends State<AuthPage> {
         const SizedBox(height: 14),
         _buildTextField(
           'Phone Number',
-          '+1 (555) 123-4567',
+          '9682000334',
           prefixIcon: Icons.phone_outlined,
           controller: _phoneController,
         ),
@@ -363,6 +367,10 @@ class _AuthPageState extends State<AuthPage> {
             isLoading: _isSubmitting,
           ),
         ),
+        const SizedBox(height: 16),
+        _buildGoogleDivider(),
+        const SizedBox(height: 16),
+        _buildGoogleButton(role: selectedRole.toLowerCase()),
       ],
     );
   }
@@ -414,6 +422,64 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
+  Widget _buildGoogleDivider() {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: AppColors.border)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            'or',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const Expanded(child: Divider(color: AppColors.border)),
+      ],
+    );
+  }
+
+  Widget _buildGoogleButton({required String role}) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: _isSubmitting ? null : () => _handleGoogleSignIn(role: role),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          side: const BorderSide(color: AppColors.border),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.network(
+              'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+              height: 20,
+              width: 20,
+              errorBuilder: (_, __, ___) =>
+                  const Icon(Icons.g_mobiledata, size: 22),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Continue with Google',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildRoleCard(String role, IconData icon) {
     final bool isSelected = selectedRole == role;
     return GestureDetector(
@@ -447,6 +513,46 @@ class _AuthPageState extends State<AuthPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleGoogleSignIn({required String role}) async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.signInWithGoogle(role: role);
+
+      if (!mounted) return;
+
+      if (!success) {
+        final msg = authProvider.errorMessage ?? 'Google Sign-In failed.';
+        if (msg != 'Google Sign-In was cancelled.') {
+          _showMessage(msg);
+        }
+        return;
+      }
+
+      final resolvedRole = authProvider.role;
+      if (resolvedRole == 'patient') {
+        context.go(AppRoutes.patientDashboard);
+        return;
+      }
+      if (resolvedRole == 'doctor') {
+        final userId = authProvider.user?.id?.trim() ?? '';
+        if (userId.isNotEmpty) {
+          final isNewProfile = await _createPendingDoctorProfile(userId);
+          if (isNewProfile) {
+            _showMessage('Doctor account created. Waiting for admin verification.');
+          }
+        }
+        if (!mounted) return;
+        context.go(AppRoutes.doctorDashboard);
+        return;
+      }
+      _showMessage('Unknown role returned by server.');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -584,39 +690,44 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
-  Future<void> _createPendingDoctorProfile(String userId) async {
+  Future<bool> _createPendingDoctorProfile(String userId) async {
     final normalizedId = userId.trim();
     if (normalizedId.isEmpty) {
-      return;
+      return false;
     }
 
     final api = sl<ApiClient>();
     try {
       await api.get('/api/doctors/user/$normalizedId');
-      return;
+      return false;
     } on DioException catch (error) {
       if (error.response?.statusCode != 404) {
-        return;
+        return false;
       }
     } catch (_) {
-      return;
+      return false;
     }
 
-    await api.post(
-      '/api/doctors',
-      data: {
-        'user_id': normalizedId,
-        'specialization': 'General Medicine',
-        'experience_years': 0,
-        'consultation_fee': 0,
-        'emergency_fee': 0,
-        'bio': '',
-        'state': '',
-        'location': '',
-        'is_verified': false,
-        'verification_status': 'pending',
-      },
-    );
+    try {
+      await api.post(
+        '/api/doctors',
+        data: {
+          'user_id': normalizedId,
+          'specialization': 'General Medicine',
+          'experience_years': 0,
+          'consultation_fee': 0,
+          'emergency_fee': 0,
+          'bio': '',
+          'state': '',
+          'location': '',
+          'is_verified': false,
+          'verification_status': 'pending',
+        },
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   void _showMessage(String message) {

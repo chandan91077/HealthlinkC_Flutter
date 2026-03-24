@@ -194,6 +194,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     final type = notification.type;
     switch (type) {
+      case 'admin_update':
+        return Icons.campaign_outlined;
       case 'chat_available':
       case 'chat_available_confirmation':
       case 'chat_disabled':
@@ -224,6 +226,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     final type = notification.type;
     switch (type) {
+      case 'admin_update':
+        return Colors.deepPurple;
       case 'chat_available':
       case 'chat_available_confirmation':
         return Colors.green;
@@ -254,6 +258,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
   String _titleForType(_NotificationItem notification) {
     if (_isEmergencyBooking(notification)) {
       return 'Emergency Booking';
+    }
+
+    if (notification.type == 'admin_update') {
+      final customTitle = notification.data['title']?.toString().trim() ?? '';
+      if (customTitle.isNotEmpty) {
+        return customTitle;
+      }
+      return 'Admin Update';
     }
 
     final type = notification.type;

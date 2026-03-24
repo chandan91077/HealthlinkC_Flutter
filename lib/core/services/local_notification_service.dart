@@ -18,12 +18,10 @@ class LocalNotificationService {
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-
     const settings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
-
     await _plugin.initialize(settings: settings);
 
     await _plugin
@@ -55,12 +53,10 @@ class LocalNotificationService {
       priority: Priority.high,
     );
     const iosDetails = DarwinNotificationDetails();
-
     const details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
-
     _notificationId += 1;
     await _plugin.show(
       id: _notificationId,

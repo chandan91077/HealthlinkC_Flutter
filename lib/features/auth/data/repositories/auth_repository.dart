@@ -30,6 +30,21 @@ class AuthRepository {
     return LoginResult.fromJson(data);
   }
 
+  Future<LoginResult> googleSignIn({
+    required String idToken,
+    required String role,
+  }) async {
+    final response = await _apiClient.post(
+      '/api/auth/google',
+      data: {'idToken': idToken, 'role': role},
+    );
+    final data = response.data;
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('Unexpected server response format');
+    }
+    return LoginResult.fromJson(data);
+  }
+
   Future<AuthUser> fetchProfile(String role) async {
     final response = await _apiClient.get('/api/auth/profile');
     final data = response.data;

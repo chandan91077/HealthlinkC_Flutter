@@ -385,6 +385,9 @@ class _ChatPageState extends State<ChatPage> {
               '/api/appointments/${widget.conversationId}/doctor-join-call',
             );
       }
+      if (!mounted) {
+        return;
+      }
       await openExternalLink(
         context,
         zoomLink,
@@ -604,6 +607,10 @@ class _ChatPageState extends State<ChatPage> {
             ? _appointment!['meeting_provider'].toString()
             : 'zoom';
 
+    if (!mounted) {
+      return;
+    }
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -725,6 +732,10 @@ class _ChatPageState extends State<ChatPage> {
                                     return;
                                   }
 
+                                  if (sheetContext.mounted) {
+                                    Navigator.of(sheetContext).pop();
+                                  }
+
                                   setState(() {
                                     _isUpdatingPermissions = true;
                                   });
@@ -752,10 +763,6 @@ class _ChatPageState extends State<ChatPage> {
                                         _appointment = data.map((k, v) =>
                                             MapEntry(k.toString(), v));
                                       });
-                                    }
-
-                                    if (sheetContext.mounted) {
-                                      Navigator.of(sheetContext).pop();
                                     }
 
                                     await _loadMessagesSilently();

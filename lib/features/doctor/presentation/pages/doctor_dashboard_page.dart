@@ -28,6 +28,7 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
   String _verificationStatus = 'pending';
   String _rejectionReason = '';
   List<Map<String, dynamic>> _appointments = const [];
+  num _totalEarnings = 0;
   int _conversationCount = 0;
   int _unreadNotifications = 0;
   int _prescriptionCount = 0;
@@ -110,6 +111,7 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
           _verificationStatus = verificationStatus;
           _rejectionReason = rejectionReason;
           _appointments = const [];
+          _totalEarnings = 0;
           _conversationCount = 0;
           _unreadNotifications = 0;
           _prescriptionCount = 0;
@@ -123,6 +125,7 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
         api.get('/api/messages/conversations'),
         api.get('/api/notifications/unread-count'),
         api.get('/api/prescriptions'),
+        api.get('/api/payments/doctor/summary'),
       ]);
 
       if (!mounted) {
@@ -133,12 +136,20 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
           ? ((results[2].data as Map<String, dynamic>)['count'] as num? ?? 0)
               .toInt()
           : 0;
+      final paymentSummary = _mapObject(results[4].data);
+      final settledEarnings = _asNum(paymentSummary?['settled_earnings']) ?? 0;
+      final unsettledEarnings =
+          _asNum(paymentSummary?['unsettled_earnings']) ?? 0;
+      final totalEarnings = _asNum(paymentSummary?['total_earnings']) ??
+          _asNum(paymentSummary?['gross_earnings']) ??
+          (settledEarnings + unsettledEarnings);
 
       setState(() {
         _doctorProfile = doctorProfile;
         _verificationStatus = verificationStatus;
         _rejectionReason = rejectionReason;
         _appointments = _mapList(results[0].data);
+        _totalEarnings = totalEarnings;
         _conversationCount = _mapList(results[1].data).length;
         _unreadNotifications = unreadCount;
         _prescriptionCount = _mapList(results[3].data).length;
@@ -158,6 +169,7 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
           _rejectionReason = '';
           _error = null;
           _appointments = const [];
+          _totalEarnings = 0;
           _conversationCount = 0;
           _unreadNotifications = 0;
           _prescriptionCount = 0;
@@ -210,6 +222,23 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
     return null;
   }
 
+  num? _asNum(dynamic value) {
+    if (value is num) {
+      return value;
+    }
+    if (value is String) {
+      return num.tryParse(value);
+    }
+    return null;
+  }
+
+  String _formatAmount(num value) {
+    if (value % 1 == 0) {
+      return value.toInt().toString();
+    }
+    return value.toStringAsFixed(2);
+  }
+
   DateTime? _appointmentDateTime(Map<String, dynamic> appointment) {
     final date = appointment['appointment_date']?.toString();
     final time = appointment['appointment_time']?.toString();
@@ -234,13 +263,6 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
   int get _pendingCount => _appointments
       .where((appointment) => appointment['status']?.toString() == 'pending')
       .length;
-
-  int get _totalEarnings => _appointments.fold<int>(0, (sum, appointment) {
-        if (appointment['payment_status']?.toString() == 'paid') {
-          return sum + ((appointment['amount'] as num?)?.toInt() ?? 0);
-        }
-        return sum;
-      });
 
   int get _totalPatients {
     final patientIds = <String>{};
@@ -838,7 +860,7 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
                                       Colors.orange),
                                   _DoctorStatCard(
                                       'Total Earnings',
-                                      '₹$_totalEarnings',
+                                      '₹${_formatAmount(_totalEarnings)}',
                                       Icons.account_balance_wallet,
                                       Colors.green),
                                   _DoctorStatCard(

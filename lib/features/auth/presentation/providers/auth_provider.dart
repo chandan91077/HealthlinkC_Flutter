@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:healthlink_connect_flutter/core/services/google_sign_in_service.dart';
 import 'package:healthlink_connect_flutter/features/auth/data/repositories/auth_repository.dart';
 import 'package:healthlink_connect_flutter/features/auth/domain/entities/auth_user.dart';
 
@@ -8,14 +9,17 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider({
     required AuthRepository authRepository,
     required FlutterSecureStorage secureStorage,
+    required GoogleSignInService googleSignInService,
   })  : _authRepository = authRepository,
-        _secureStorage = secureStorage;
+        _secureStorage = secureStorage,
+        _googleSignInService = googleSignInService;
 
   static const String _tokenKey = 'auth_token';
   static const String _roleKey = 'user_role';
 
   final AuthRepository _authRepository;
   final FlutterSecureStorage _secureStorage;
+  final GoogleSignInService _googleSignInService;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -71,6 +75,40 @@ class AuthProvider extends ChangeNotifier {
       return true;
     } catch (_) {
       _errorMessage = 'Failed to update profile. Please try again.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> signInWithGoogle({required String role}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final idToken = await _googleSignInService.getIdToken();
+      if (idToken == null) {
+        _errorMessage = 'Google Sign-In was cancelled.';
+        return false;
+      }
+
+      final result = await _authRepository.googleSignIn(
+        idToken: idToken,
+        role: role,
+      );
+
+      _token = result.token;
+      _role = result.role;
+      _user = result.user;
+
+      await _secureStorage.write(key: _tokenKey, value: result.token);
+      await _secureStorage.write(key: _roleKey, value: result.role);
+
+      return true;
+    } catch (e) {
+      _errorMessage = _extractErrorMessage(e);
       return false;
     } finally {
       _isLoading = false;

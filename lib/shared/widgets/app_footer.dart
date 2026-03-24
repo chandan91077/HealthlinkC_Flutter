@@ -144,15 +144,18 @@ class AppFooter extends StatelessWidget {
         children: [
           InkWell(
             onTap: () => context.go(AppRoutes.home),
-            child: Row(
+            child: const Row(
               children: [
-                const AppLogo(size: 32, radius: 8),
-                const SizedBox(width: 8),
-                Text('MediConnect',
-                    style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.secondary)),
+                AppLogo(size: 32, radius: 8),
+                SizedBox(width: 8),
+                Text(
+                  'MediConnect',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.secondary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -193,8 +196,8 @@ class AppFooter extends StatelessWidget {
         const Text('Contact Us',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 16),
-        _buildContactItem(Icons.email_outlined, 'support@mediconnect.com'),
-        _buildContactItem(Icons.phone_outlined, '+1 (555) 123-4567'),
+        _buildContactItem(Icons.email_outlined, 'chandany67071@gmail.com'),
+        _buildContactItem(Icons.phone_outlined, '9682000334'),
         _buildContactItem(Icons.location_on_outlined,
             '123 Healthcare Ave, Medical City, MC 12345'),
       ],

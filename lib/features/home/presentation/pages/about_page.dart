@@ -148,8 +148,8 @@ class AboutPage extends StatelessWidget {
   }
 
   Widget _buildHowItWorks() {
-    return Column(
-      children: const [
+    return const Column(
+      children: [
         _NumberedStep(
           number: '1',
           title: 'Find Your Doctor',
@@ -447,7 +447,7 @@ class AboutPage extends StatelessWidget {
                     width: stack
                         ? constraints.maxWidth
                         : (constraints.maxWidth - 40) / 3,
-                    child: _FooterBlock(
+                    child: const _FooterBlock(
                       title: 'MediConnect',
                       lines: [
                         'Connecting patients with trusted healthcare professionals for seamless consultations and care.',
@@ -460,7 +460,7 @@ class AboutPage extends StatelessWidget {
                         : (constraints.maxWidth - 40) / 3,
                     child: _FooterBlock(
                       title: 'Quick Links',
-                      lines: [
+                      lines: const [
                         'Find Doctors',
                         'Specializations',
                         'About Us',
@@ -475,7 +475,7 @@ class AboutPage extends StatelessWidget {
                         : (constraints.maxWidth - 40) / 3,
                     child: _FooterBlock(
                       title: 'For Doctors',
-                      lines: ['Join as Doctor', 'Benefits', 'FAQ'],
+                      lines: const ['Join as Doctor', 'Benefits', 'FAQ'],
                       onTapLine: (line) => _onFooterLinkTap(rootContext, line),
                     ),
                   ),
@@ -484,9 +484,9 @@ class AboutPage extends StatelessWidget {
               const SizedBox(height: 16),
               _FooterBlock(
                 title: 'Contact Us',
-                lines: [
-                  'support@mediconnect.com',
-                  '+1 (555) 123-4567',
+                lines: const [
+                  'chandany67071@gmail.com',
+                  '9682000334',
                   '123 Healthcare Ave, Medical City, MC 12345',
                 ],
                 onTapLine: (line) => _onFooterLinkTap(rootContext, line),

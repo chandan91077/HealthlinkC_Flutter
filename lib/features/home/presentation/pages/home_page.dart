@@ -376,9 +376,9 @@ class HomePage extends StatelessWidget {
           ),
           SizedBox(height: 12),
           _ContactRow(
-              icon: Icons.email_outlined, text: 'support@mediconnect.com'),
+              icon: Icons.email_outlined, text: 'chandany67071@gmail.com'),
           SizedBox(height: 8),
-          _ContactRow(icon: Icons.phone_outlined, text: '+1 (555) 125-4567'),
+          _ContactRow(icon: Icons.phone_outlined, text: '9682000334'),
           SizedBox(height: 8),
           _ContactRow(
               icon: Icons.location_on_outlined,

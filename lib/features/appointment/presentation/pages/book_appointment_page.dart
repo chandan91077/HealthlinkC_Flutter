@@ -599,7 +599,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                       ),
                       const SizedBox(height: 20),
                       const Text(
-                        'Payment mode (Cash/Online) will be selected on checkout page.',
+                        'You will be redirected to secure payment on the next page.',
                         style: TextStyle(color: AppColors.textSecondary),
                       ),
                       Container(

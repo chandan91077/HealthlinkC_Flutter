@@ -347,7 +347,7 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
   }
 
   Widget _buildHighlightsSection() {
-    final List<_FeatureHighlight> highlights = const [
+    const List<_FeatureHighlight> highlights = [
       _FeatureHighlight(
         icon: Icons.verified_user_outlined,
         title: 'Verified Doctors',

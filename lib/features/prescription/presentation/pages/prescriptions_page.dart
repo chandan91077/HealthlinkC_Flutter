@@ -13,6 +13,7 @@ class PrescriptionsPage extends StatefulWidget {
 }
 
 class _PrescriptionsPageState extends State<PrescriptionsPage> {
+  static const Duration _patientRecencyWindow = Duration(days: 6);
   bool _isLoading = true;
   bool _isCreating = false;
   String? _error;
@@ -97,18 +98,113 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
 
   List<Map<String, dynamic>> _doctorBookableAppointments(
       List<Map<String, dynamic>> allAppointments) {
-    return allAppointments.where((appointment) {
+    final now = DateTime.now();
+    final cutoff = now.subtract(_patientRecencyWindow);
+    final latestByPatientId = <String, Map<String, dynamic>>{};
+
+    for (final appointment in allAppointments) {
       final id = appointment['_id']?.toString() ?? '';
       if (id.isEmpty) {
-        return false;
+        continue;
       }
+
       final status = appointment['status']?.toString() ?? '';
       if (status == 'cancelled') {
-        return false;
+        continue;
       }
-      final patient = appointment['patient_id'];
-      return patient is Map<String, dynamic>;
-    }).toList();
+
+      final patientId = _patientId(appointment);
+      if (patientId == null) {
+        continue;
+      }
+
+      final appointmentDate = _appointmentDateTime(appointment);
+      if (appointmentDate == null || appointmentDate.isBefore(cutoff)) {
+        continue;
+      }
+
+      final existing = latestByPatientId[patientId];
+      if (existing == null) {
+        latestByPatientId[patientId] = appointment;
+        continue;
+      }
+
+      final existingDate = _appointmentDateTime(existing);
+      if (existingDate == null || appointmentDate.isAfter(existingDate)) {
+        latestByPatientId[patientId] = appointment;
+      }
+    }
+
+    final appointments = latestByPatientId.values.toList();
+    appointments.sort((a, b) {
+      final aDate = _appointmentDateTime(a) ?? DateTime(1970);
+      final bDate = _appointmentDateTime(b) ?? DateTime(1970);
+      return bDate.compareTo(aDate);
+    });
+    return appointments;
+  }
+
+  String? _patientId(Map<String, dynamic> appointment) {
+    final patient = appointment['patient_id'];
+    if (patient is Map<String, dynamic>) {
+      final id = patient['_id']?.toString().trim() ?? '';
+      if (id.isNotEmpty) {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  DateTime? _appointmentDateTime(Map<String, dynamic> appointment) {
+    final dateRaw = appointment['appointment_date']?.toString().trim() ?? '';
+    final timeRaw = appointment['appointment_time']?.toString().trim() ?? '';
+
+    if (dateRaw.isNotEmpty) {
+      if (timeRaw.isNotEmpty) {
+        final normalizedTime = _normalizeTimeForIso(timeRaw);
+        final withTime = DateTime.tryParse('${dateRaw}T$normalizedTime');
+        if (withTime != null) {
+          return withTime;
+        }
+      }
+
+      final dateOnly = DateTime.tryParse(dateRaw);
+      if (dateOnly != null) {
+        return dateOnly;
+      }
+    }
+
+    final createdAt = appointment['createdAt']?.toString().trim() ?? '';
+    if (createdAt.isNotEmpty) {
+      final created = DateTime.tryParse(createdAt);
+      if (created != null) {
+        return created;
+      }
+    }
+
+    final updatedAt = appointment['updatedAt']?.toString().trim() ?? '';
+    if (updatedAt.isNotEmpty) {
+      final updated = DateTime.tryParse(updatedAt);
+      if (updated != null) {
+        return updated;
+      }
+    }
+
+    return null;
+  }
+
+  String _normalizeTimeForIso(String rawTime) {
+    final value = rawTime.trim();
+    if (value.isEmpty) {
+      return '00:00:00';
+    }
+    if (RegExp(r'^\d{2}:\d{2}:\d{2}$').hasMatch(value)) {
+      return value;
+    }
+    if (RegExp(r'^\d{2}:\d{2}$').hasMatch(value)) {
+      return '$value:00';
+    }
+    return value;
   }
 
   Future<void> _showCreatePrescriptionSheet() async {

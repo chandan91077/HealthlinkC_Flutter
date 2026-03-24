@@ -25,7 +25,7 @@ class App extends StatelessWidget {
         builder: (context, preferences, _) {
           return GlobalNotificationPoller(
             child: MaterialApp.router(
-              title: 'HealthLink Connect',
+              title: 'MediConnect',
               debugShowCheckedModeBanner: false,
               theme: AppTheme.light,
               darkTheme: AppTheme.dark,

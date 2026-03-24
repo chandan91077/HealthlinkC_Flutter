@@ -1,4 +1,4 @@
-package com.example.healthlinkc
+package com.mediconnect.chandan
 
 import io.flutter.embedding.android.FlutterActivity
 

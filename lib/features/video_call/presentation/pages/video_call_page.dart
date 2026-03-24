@@ -33,12 +33,13 @@ class _VideoCallPageState extends State<VideoCallPage> {
                   const SizedBox(height: 8),
                   Text(
                     'Connecting...',
-                    style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                    style:
+                        TextStyle(color: Colors.white.withValues(alpha: 0.7)),
                   ),
                 ],
               ),
             ),
-            
+
             // Local Video PIP Placeholder
             Positioned(
               top: 16,
@@ -52,11 +53,13 @@ class _VideoCallPageState extends State<VideoCallPage> {
                   border: Border.all(color: Colors.white24),
                 ),
                 child: isCameraOff
-                    ? const Center(child: Icon(Icons.videocam_off, color: Colors.white54))
-                    : const Center(child: Icon(Icons.person, color: Colors.white)),
+                    ? const Center(
+                        child: Icon(Icons.videocam_off, color: Colors.white54))
+                    : const Center(
+                        child: Icon(Icons.person, color: Colors.white)),
               ),
             ),
-            
+
             // Back Button
             Positioned(
               top: 16,
@@ -66,7 +69,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
-            
+
             // Controls
             Positioned(
               bottom: 32,

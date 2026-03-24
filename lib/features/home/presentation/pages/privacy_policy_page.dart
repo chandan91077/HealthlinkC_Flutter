@@ -100,7 +100,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Questions about privacy? Contact us at support@mediconnect.com.',
+                    'Questions about privacy? Contact us at chandany67071@gmail.com.',
                     style: TextStyle(color: Color(0xFF334155), height: 1.35),
                   ),
                 ),

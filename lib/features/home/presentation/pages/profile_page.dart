@@ -10,13 +10,13 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Profile', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text('Profile',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -40,7 +40,11 @@ class ProfilePage extends StatelessWidget {
               color: AppColors.primary.withAlpha(25),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.person_outline, color: AppColors.primary, size: 80),
+            child: const Icon(
+              Icons.person_outline,
+              color: AppColors.primary,
+              size: 80,
+            ),
           ),
           const SizedBox(height: 32),
           const Text(
@@ -69,9 +73,13 @@ class ProfilePage extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     side: const BorderSide(color: AppColors.primary),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Sign Up', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                  child: const Text('Sign Up',
+                      style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

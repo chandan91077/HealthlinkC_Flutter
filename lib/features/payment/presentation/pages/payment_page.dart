@@ -1,4 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
+import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
+import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
+import 'package:flutter_cashfree_pg_sdk/utils/cfexceptions.dart';
 import 'package:go_router/go_router.dart';
 import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/core/network/api_client.dart';
@@ -12,16 +19,19 @@ class PaymentPage extends StatefulWidget {
 }
 
 class _PaymentPageState extends State<PaymentPage> {
+  final CFPaymentGatewayService _cashfreeGateway = CFPaymentGatewayService();
+
   bool _isLoading = true;
   bool _isProcessing = false;
+  bool _isVerifyingPayment = false;
   String? _error;
   Map<String, dynamic>? _appointment;
-  String _selectedPaymentMode = 'online';
-  String _selectedOnlineMethod = 'upi';
+
 
   @override
   void initState() {
     super.initState();
+    _cashfreeGateway.setCallback(_verifyCashfreePayment, _onCashfreeError);
     _loadAppointment();
   }
 
@@ -84,39 +94,25 @@ class _PaymentPageState extends State<PaymentPage> {
     });
 
     try {
-      await sl<ApiClient>().post(
-        '/api/payments',
-        data: {
-          'appointment_id': widget.bookingId,
-          'amount': amount,
-          'payment_method': _selectedPaymentMode,
-          'razorpay_order_id':
-              'cf_order_${DateTime.now().millisecondsSinceEpoch}',
-          'razorpay_payment_id':
-              'cf_pay_${DateTime.now().millisecondsSinceEpoch}',
-        },
-      );
-
+      await _startCashfreeCheckout();
+      return;
+    } on DioException catch (error) {
       if (!mounted) {
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            _selectedPaymentMode == 'cash'
-                ? 'Cash payment selected. Appointment is pending until payment is completed.'
-                : 'Online payment successful. Appointment confirmed.',
-          ),
-          backgroundColor:
-              _selectedPaymentMode == 'cash' ? Colors.orange : Colors.green,
+          content:
+              Text(_dioMessage(error, 'Payment failed. Please try again.')),
+          backgroundColor: Colors.red,
         ),
       );
-      context.go('/appointments?tab=upcoming');
     } catch (_) {
       if (!mounted) {
         return;
       }
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Payment failed. Please try again.'),
@@ -129,6 +125,206 @@ class _PaymentPageState extends State<PaymentPage> {
           _isProcessing = false;
         });
       }
+    }
+  }
+
+  String _dioMessage(DioException error, String fallback) {
+    final data = error.response?.data;
+    if (data is Map<String, dynamic>) {
+      final message = data['message']?.toString().trim() ?? '';
+      if (message.isNotEmpty) {
+        return message;
+      }
+    }
+    return fallback;
+  }
+
+  CFEnvironment _cashfreeEnvironmentFrom(String value) {
+    return value.toLowerCase() == 'production'
+        ? CFEnvironment.PRODUCTION
+        : CFEnvironment.SANDBOX;
+  }
+
+  Future<CFSession?> _createCashfreeSession() async {
+    try {
+      final response = await sl<ApiClient>().post(
+        '/api/payments/cashfree/order',
+        data: {'appointment_id': widget.bookingId},
+      );
+
+      final data = response.data;
+      final payload = data is Map<String, dynamic>
+          ? data
+          : data is Map
+              ? data.map((k, v) => MapEntry(k.toString(), v))
+              : <String, dynamic>{};
+
+      final orderId = payload['order_id']?.toString() ?? '';
+      final paymentSessionId = payload['payment_session_id']?.toString() ?? '';
+      final environment = payload['cashfree_env']?.toString() ?? 'sandbox';
+
+      if (orderId.isEmpty || paymentSessionId.isEmpty) {
+        throw const FormatException('Cashfree order session was not returned.');
+      }
+
+      return CFSessionBuilder()
+          .setEnvironment(_cashfreeEnvironmentFrom(environment))
+          .setOrderId(orderId)
+          .setPaymentSessionId(paymentSessionId)
+          .build();
+    } on DioException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _dioMessage(error, 'Failed to create Cashfree order session.'),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } on CFException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } on FormatException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _startCashfreeCheckout() async {
+    final session = await _createCashfreeSession();
+    if (session == null) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      _cashfreeGateway.setCallback(_verifyCashfreePayment, _onCashfreeError);
+      final payment = CFWebCheckoutPaymentBuilder().setSession(session).build();
+      _cashfreeGateway.doPayment(payment);
+    } on CFException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isProcessing = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _verifyCashfreePayment(String orderId) async {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isProcessing = false;
+      _isVerifyingPayment = true;
+    });
+
+    try {
+      await sl<ApiClient>().post(
+        '/api/payments/cashfree/verify',
+        data: {
+          'appointment_id': widget.bookingId,
+          'order_id': orderId,
+        },
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment successful. Appointment confirmed.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      context.go('/appointments?tab=upcoming');
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _dioMessage(
+                error, 'Payment verification failed. Please try again.'),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVerifyingPayment = false;
+        });
+      }
+    }
+  }
+
+  void _onCashfreeError(CFErrorResponse errorResponse, String orderId) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isProcessing = false;
+      _isVerifyingPayment = false;
+    });
+
+    // Mark the appointment as failed so the time slot is freed
+    _markAppointmentFailed();
+
+    final message = (errorResponse.getMessage() ?? '').trim();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message.isNotEmpty
+            ? message
+            : 'Payment failed. The time slot has been freed.'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    context.go('/appointments?tab=upcoming');
+  }
+
+  Future<void> _markAppointmentFailed() async {
+    try {
+      await sl<ApiClient>().post(
+        '/api/payments/cashfree/fail',
+        data: {'appointment_id': widget.bookingId},
+      );
+    } catch (_) {
+      // Best-effort; cron job will also auto-cancel unpaid appointments
     }
   }
 
@@ -223,7 +419,7 @@ class _PaymentPageState extends State<PaymentPage> {
                               _buildFeeRow('Doctor Consultation Fee',
                                   _formatRupee(doctorFee)),
                               const SizedBox(height: 8),
-                              _buildFeeRow('Platform Fee (Admin)',
+                              _buildFeeRow('Platform Fee ',
                                   _formatRupee(platformFee)),
                               const Divider(height: 32),
                               _buildFeeRow('Total Amount', _formatRupee(total),
@@ -232,64 +428,22 @@ class _PaymentPageState extends State<PaymentPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 32),
-                      const Text('Payment Mode',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('Cash'),
-                            selected: _selectedPaymentMode == 'cash',
-                            onSelected: (selected) {
-                              if (!selected) return;
-                              setState(() => _selectedPaymentMode = 'cash');
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('Online'),
-                            selected: _selectedPaymentMode == 'online',
-                            onSelected: (selected) {
-                              if (!selected) return;
-                              setState(() => _selectedPaymentMode = 'online');
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _selectedPaymentMode == 'cash'
-                            ? 'Pay cash at clinic/hospital. Appointment remains pending until completed.'
-                            : 'Pay online now to confirm appointment immediately.',
-                      ),
-                      if (_selectedPaymentMode == 'online') ...[
-                        const SizedBox(height: 24),
-                        const Text('Online Method',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _buildMethodChip(
-                                'UPI', Icons.account_balance_wallet, 'upi'),
-                            _buildMethodChip('Card', Icons.credit_card, 'card'),
-                            _buildMethodChip('Net Banking',
-                                Icons.account_balance, 'netbanking'),
-                          ],
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Text(
+                          'The app will open Cashfree checkout and let you choose UPI, card, or net banking securely.',
                         ),
-                      ],
+                      ),
                       const SizedBox(height: 48),
                       ElevatedButton(
-                        onPressed: _isProcessing ? null : _processPayment,
+                        onPressed: _isProcessing || _isVerifyingPayment
+                            ? null
+                            : _processPayment,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 56),
                         ),
-                        child: _isProcessing
+                        child: _isProcessing || _isVerifyingPayment
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
@@ -298,9 +452,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                   color: Colors.white,
                                 ),
                               )
-                            : Text(_selectedPaymentMode == 'cash'
-                                ? 'Confirm Cash Payment'
-                                : 'Pay ${_formatRupee(total)}'),
+                            : Text('Pay ${_formatRupee(total)}'),
                       ),
                     ],
                   ),
@@ -321,19 +473,6 @@ class _PaymentPageState extends State<PaymentPage> {
                 fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
                 fontSize: 16)),
       ],
-    );
-  }
-
-  Widget _buildMethodChip(String title, IconData icon, String value) {
-    final selected = _selectedOnlineMethod == value;
-    return ChoiceChip(
-      avatar: Icon(icon, size: 16),
-      label: Text(title),
-      selected: selected,
-      onSelected: (isSelected) {
-        if (!isSelected) return;
-        setState(() => _selectedOnlineMethod = value);
-      },
     );
   }
 }

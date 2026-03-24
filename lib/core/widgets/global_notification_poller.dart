@@ -97,16 +97,21 @@ class _GlobalNotificationPollerState extends State<GlobalNotificationPoller>
                 !_seenUnreadNotificationIds.contains(notification.id))
             .toList();
 
-        if (newItems.isNotEmpty) {
-          for (final item in newItems.reversed) {
+        final alertItems = newItems
+            .where((notification) => _shouldShowPhoneAlert(notification))
+            .toList();
+
+        if (alertItems.isNotEmpty) {
+          for (final item in alertItems.reversed) {
             await sl<LocalNotificationService>().showSimpleNotification(
               title: _titleForType(item),
               body: item.message.isNotEmpty
                   ? item.message
                   : 'You received a new notification.',
             );
-            _seenUnreadNotificationIds.add(item.id);
           }
+        } else if (newItems.isNotEmpty) {
+          // Keep doctor-action updates silent on the phone while preserving them in-app.
         } else {
           final newUnreadCount = unreadCount - _lastUnreadCount;
           await sl<LocalNotificationService>().showSimpleNotification(
@@ -114,6 +119,10 @@ class _GlobalNotificationPollerState extends State<GlobalNotificationPoller>
             body:
                 'You have $newUnreadCount new notification${newUnreadCount > 1 ? 's' : ''}.',
           );
+        }
+
+        for (final item in newItems) {
+          _seenUnreadNotificationIds.add(item.id);
         }
       }
 
@@ -156,12 +165,37 @@ class _GlobalNotificationPollerState extends State<GlobalNotificationPoller>
   }
 }
 
+bool _shouldShowPhoneAlert(_UnreadNotification notification) {
+  switch (notification.type) {
+    case 'admin_update':
+    case 'new_appointment':
+    case 'appointment_confirmed':
+    case 'payment_pending':
+    case 'preempted':
+      return true;
+    case 'chat_available':
+    case 'chat_available_confirmation':
+    case 'chat_disabled':
+    case 'chat_disabled_confirmation':
+    case 'video_link':
+    case 'video_call_started':
+    case 'video_call_started_confirmation':
+    case 'video_call_ended':
+    case 'video_call_ended_confirmation':
+    case 'new_message':
+      return false;
+    default:
+      return false;
+  }
+}
+
 class _UnreadNotification {
   const _UnreadNotification({
     required this.id,
     required this.message,
     required this.type,
     required this.appointmentType,
+    required this.title,
   });
 
   factory _UnreadNotification.fromJson(Map<String, dynamic> json) {
@@ -175,6 +209,7 @@ class _UnreadNotification {
       message: json['message']?.toString() ?? '',
       type: json['type']?.toString() ?? '',
       appointmentType: data['appointment_type']?.toString() ?? '',
+      title: data['title']?.toString().trim() ?? '',
     );
   }
 
@@ -182,12 +217,20 @@ class _UnreadNotification {
   final String message;
   final String type;
   final String appointmentType;
+  final String title;
 }
 
 String _titleForType(_UnreadNotification notification) {
   if (notification.type == 'new_appointment' &&
       notification.appointmentType == 'emergency') {
     return 'Emergency Booking';
+  }
+
+  if (notification.type == 'admin_update') {
+    if (notification.title.isNotEmpty) {
+      return notification.title;
+    }
+    return 'Admin Update';
   }
 
   switch (notification.type) {

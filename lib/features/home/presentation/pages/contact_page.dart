@@ -49,13 +49,13 @@ class ContactPage extends StatelessWidget {
           const _ContactCard(
             icon: Icons.email_outlined,
             title: 'Email',
-            value: 'support@mediconnect.com',
+            value: 'chandany67071@gmail.com',
           ),
           const SizedBox(height: 10),
           const _ContactCard(
             icon: Icons.phone_outlined,
             title: 'Phone',
-            value: '+1 (555) 123-4567',
+            value: '9682000334',
           ),
           const SizedBox(height: 10),
           const _ContactCard(
@@ -64,10 +64,10 @@ class ContactPage extends StatelessWidget {
             value: '123 Healthcare Ave, Medical City, MC 12345',
           ),
           const SizedBox(height: 12),
-          Wrap(
+          const Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: const [
+            children: [
               _TagChip(label: '24/7 Chat Support'),
               _TagChip(label: 'Average Response: < 10 mins'),
               _TagChip(label: 'Multilingual Assistance'),
