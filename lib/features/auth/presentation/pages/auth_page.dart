@@ -8,9 +8,7 @@ import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/core/network/api_client.dart';
 import 'package:healthlink_connect_flutter/core/theme/app_colors.dart';
 import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
-import 'package:healthlink_connect_flutter/shared/widgets/app_logo.dart';
 import 'package:healthlink_connect_flutter/shared/widgets/app_button.dart';
-import 'package:healthlink_connect_flutter/shared/widgets/app_footer.dart';
 import 'package:healthlink_connect_flutter/shared/widgets/medi_connect_header_drawer.dart';
 
 class AuthPage extends StatefulWidget {
@@ -106,7 +104,6 @@ class _AuthPageState extends State<AuthPage> {
                 ),
               ),
             ),
-            const AppFooter(),
           ],
         ),
       ),
@@ -137,19 +134,22 @@ class _AuthPageState extends State<AuthPage> {
             ),
             const SizedBox(height: 10),
           ],
-          const Row(
-            children: [
-              AppLogo(size: 30, radius: 8),
-              SizedBox(width: 8),
-              Text(
-                'MediConnect',
-                style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary),
-              ),
-            ],
-          ),
+          if (!showBackToHome)
+            const Text(
+              'MediConnect',
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary),
+            )
+          else
+            Text(
+              isLogin ? 'Sign In' : 'Create Account',
+              style: const TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary),
+            ),
           const SizedBox(height: 22),
           _buildToggle(),
           const SizedBox(height: 14),
@@ -542,7 +542,8 @@ class _AuthPageState extends State<AuthPage> {
         if (userId.isNotEmpty) {
           final isNewProfile = await _createPendingDoctorProfile(userId);
           if (isNewProfile) {
-            _showMessage('Doctor account created. Waiting for admin verification.');
+            _showMessage(
+                'Doctor account created. Waiting for admin verification.');
           }
         }
         if (!mounted) return;

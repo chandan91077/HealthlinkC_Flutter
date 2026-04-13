@@ -37,6 +37,11 @@ import 'package:healthlink_connect_flutter/shared/widgets/scaffold_with_nav_bar.
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
+  static final _homeNavigatorKey = GlobalKey<NavigatorState>();
+  static final _profileNavigatorKey = GlobalKey<NavigatorState>();
+  static final _appointmentsNavigatorKey = GlobalKey<NavigatorState>();
+  static final _doctorsNavigatorKey = GlobalKey<NavigatorState>();
+  static final _chatNavigatorKey = GlobalKey<NavigatorState>();
 
   static final router = GoRouter(
     initialLocation: AppRoutes.startup,
@@ -62,11 +67,21 @@ class AppRouter {
       // Main App Shell with Bottom Navigation
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return ScaffoldWithNavBar(navigationShell: navigationShell);
+          return ScaffoldWithNavBar(
+            navigationShell: navigationShell,
+            branchNavigatorKeys: [
+              _homeNavigatorKey,
+              _profileNavigatorKey,
+              _appointmentsNavigatorKey,
+              _doctorsNavigatorKey,
+              _chatNavigatorKey,
+            ],
+          );
         },
         branches: [
           // Home tab
           StatefulShellBranch(
+            navigatorKey: _homeNavigatorKey,
             routes: [
               GoRoute(
                 path: AppRoutes.home,
@@ -77,6 +92,7 @@ class AppRouter {
           ),
           // Profile tab
           StatefulShellBranch(
+            navigatorKey: _profileNavigatorKey,
             routes: [
               GoRoute(
                 path: AppRoutes.profile,
@@ -87,6 +103,7 @@ class AppRouter {
           ),
           // Appointments tab
           StatefulShellBranch(
+            navigatorKey: _appointmentsNavigatorKey,
             routes: [
               GoRoute(
                 path: AppRoutes.appointments,
@@ -99,6 +116,7 @@ class AppRouter {
           ),
           // Find Doctor tab
           StatefulShellBranch(
+            navigatorKey: _doctorsNavigatorKey,
             routes: [
               GoRoute(
                 path: AppRoutes.doctors,
@@ -109,6 +127,7 @@ class AppRouter {
           ),
           // Chat tab
           StatefulShellBranch(
+            navigatorKey: _chatNavigatorKey,
             routes: [
               GoRoute(
                 path: AppRoutes.chat,

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:healthlink_connect_flutter/core/services/google_sign_in_service.dart';
 import 'package:healthlink_connect_flutter/features/auth/data/repositories/auth_repository.dart';
@@ -171,6 +172,21 @@ class AuthProvider extends ChangeNotifier {
 
     if (error is FormatException) {
       return error.message;
+    }
+
+    if (error is FirebaseAuthException) {
+      final message = error.message?.trim();
+      if (message != null && message.isNotEmpty) {
+        return message;
+      }
+
+      if (error.code == 'missing-google-id-token') {
+        return 'Google ID token was not generated. Verify Firebase Google Sign-In setup.';
+      }
+      if (error.code == 'missing-firebase-id-token') {
+        return 'Firebase session token could not be created. Please try again.';
+      }
+      return 'Google Sign-In failed. Please try again.';
     }
 
     return 'Login failed. Please verify your credentials.';

@@ -12,7 +12,36 @@
           "package_name": "com.mediconnect.chandan"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "686900284890-aho3np7rhe6i0ia84mh0kif6in94vgco.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mediconnect.chandan",
+            "certificate_hash": "b891f5e591b2609397402af2944019c8df9d9887"
+          }
+        },
+        {
+          "client_id": "686900284890-m3hekfvo4tfnac3f9p5lo8g5l3g0ohsr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mediconnect.chandan",
+            "certificate_hash": "9f9a9ab04771a8624a35a26ef045619e29be1851"
+          }
+        },
+        {
+          "client_id": "686900284890-ru3p0fms7jiiabvvp10odai8q3dbqib0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mediconnect.chandan",
+            "certificate_hash": "57a111e324d08ed9f36c94e762ef131055ec3de8"
+          }
+        },
+        {
+          "client_id": "686900284890-vf2a7ms4mevr1c8t3lichl85a33djf75.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBJrYrcsFMkDCHk-7Hb3eAfIo1MzYGQ1MM"
@@ -20,7 +49,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "686900284890-vf2a7ms4mevr1c8t3lichl85a33djf75.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
