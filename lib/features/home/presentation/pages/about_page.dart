@@ -33,7 +33,7 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: 16),
           _buildMissionVision(),
           const SizedBox(height: 20),
-          _buildSectionTitle('How MediConnect Works'),
+          _buildSectionTitle(context, 'How MediConnect Works'),
           const SizedBox(height: 6),
           Text(
             "We've simplified healthcare access through our secure and intuitive platform",
@@ -42,7 +42,7 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: 10),
           _buildHowItWorks(),
           const SizedBox(height: 20),
-          _buildSectionTitle('Why Choose MediConnect?'),
+          _buildSectionTitle(context, 'Why Choose MediConnect?'),
           const SizedBox(height: 6),
           Text(
             'We combine technology with compassion to deliver exceptional healthcare experiences',
@@ -51,7 +51,7 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: 10),
           _buildWhyChoose(),
           const SizedBox(height: 20),
-          _buildSectionTitle('Our Core Values'),
+          _buildSectionTitle(context, 'Our Core Values'),
           const SizedBox(height: 6),
           Text(
             'The principles that guide everything we do',
@@ -60,9 +60,9 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: 10),
           _buildValues(),
           const SizedBox(height: 20),
-          _buildStats(),
+          _buildStats(context),
           const SizedBox(height: 20),
-          _buildTrustSection(),
+          _buildTrustSection(context),
           const SizedBox(height: 20),
           _buildCta(context),
           const SizedBox(height: 20),
@@ -130,6 +130,7 @@ class AboutPage extends StatelessWidget {
           runSpacing: 12,
           children: [
             _infoCard(
+              context: context,
               width: stack ? double.infinity : (constraints.maxWidth - 12) / 2,
               icon: Icons.flag_outlined,
               title: 'Our Mission',
@@ -137,6 +138,7 @@ class AboutPage extends StatelessWidget {
                   'To make quality healthcare accessible and affordable for everyone by connecting patients with verified doctors through a secure, user-friendly digital platform. We believe that distance and time should never be barriers to receiving expert medical care.',
             ),
             _infoCard(
+              context: context,
               width: stack ? double.infinity : (constraints.maxWidth - 12) / 2,
               icon: Icons.visibility_outlined,
               title: 'Our Vision',
@@ -254,7 +256,7 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStats() {
+  Widget _buildStats(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final stats = [
@@ -325,7 +327,7 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  Widget _buildTrustSection() {
+  Widget _buildTrustSection(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
@@ -553,6 +555,7 @@ class AboutPage extends StatelessWidget {
   }
 
   Widget _infoCard({
+    required BuildContext context,
     required double width,
     required IconData icon,
     required String title,
@@ -635,7 +638,7 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Text(
       title,
       style: TextStyle(

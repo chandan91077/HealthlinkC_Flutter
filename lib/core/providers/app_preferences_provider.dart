@@ -12,7 +12,7 @@ class AppPreferencesProvider extends ChangeNotifier {
 
   final FlutterSecureStorage _secureStorage;
 
-  ThemeMode _themeMode = ThemeMode.dark;
+  ThemeMode _themeMode = ThemeMode.light;
   bool _biometricEnabled = false;
   bool _notificationPrompted = false;
 
@@ -28,7 +28,8 @@ class AppPreferencesProvider extends ChangeNotifier {
     final storedNotificationPrompted =
         await _secureStorage.read(key: _notificationPromptedKey);
 
-    _themeMode = storedThemeMode == 'light' ? ThemeMode.light : ThemeMode.dark;
+    // Default to light mode if not previously set
+    _themeMode = storedThemeMode == 'dark' ? ThemeMode.dark : ThemeMode.light;
     _biometricEnabled = storedBiometric == 'true';
     _notificationPrompted = storedNotificationPrompted == 'true';
     notifyListeners();
