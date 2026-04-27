@@ -53,6 +53,12 @@ class _ConversationsPageState extends State<ConversationsPage> {
               .toList()
           : <Map<String, dynamic>>[];
 
+      conversations.sort(
+        (a, b) => _conversationTimestamp(b).compareTo(
+          _conversationTimestamp(a),
+        ),
+      );
+
       if (!mounted) {
         return;
       }
@@ -99,6 +105,41 @@ class _ConversationsPageState extends State<ConversationsPage> {
     return '';
   }
 
+  DateTime _conversationTimestamp(Map<String, dynamic> conversation) {
+    final lastMessage = conversation['lastMessage'];
+    if (lastMessage is Map) {
+      final candidates = [
+        lastMessage['createdAt'],
+        lastMessage['created_at'],
+        lastMessage['updatedAt'],
+        lastMessage['updated_at'],
+      ];
+
+      for (final candidate in candidates) {
+        final timestamp = DateTime.tryParse(candidate?.toString() ?? '');
+        if (timestamp != null) {
+          return timestamp;
+        }
+      }
+    }
+
+    final fallbackCandidates = [
+      conversation['updatedAt'],
+      conversation['updated_at'],
+      conversation['createdAt'],
+      conversation['created_at'],
+    ];
+
+    for (final candidate in fallbackCandidates) {
+      final timestamp = DateTime.tryParse(candidate?.toString() ?? '');
+      if (timestamp != null) {
+        return timestamp;
+      }
+    }
+
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
   String _appointmentId(Map<String, dynamic> conversation) {
     final raw = conversation['appointment_id'];
     if (raw is String) {
@@ -111,6 +152,10 @@ class _ConversationsPageState extends State<ConversationsPage> {
       return raw['_id']?.toString() ?? '';
     }
     return raw?.toString() ?? '';
+  }
+
+  bool _chatUnlocked(Map<String, dynamic> conversation) {
+    return conversation['chat_unlocked'] == true;
   }
 
   @override
@@ -146,13 +191,36 @@ class _ConversationsPageState extends State<ConversationsPage> {
                           itemBuilder: (context, index) {
                             final conversation = _conversations[index];
                             final appointmentId = _appointmentId(conversation);
+                            final chatUnlocked = _chatUnlocked(conversation);
                             final unread = (conversation['unreadCount'] as num?)
                                     ?.toInt() ??
                                 0;
 
                             return ListTile(
-                              leading: const CircleAvatar(
-                                child: Icon(Icons.person),
+                              leading: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  const CircleAvatar(
+                                    child: Icon(Icons.person),
+                                  ),
+                                  if (chatUnlocked)
+                                    Positioned(
+                                      right: -1,
+                                      bottom: -1,
+                                      child: Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: Colors.green,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                               title: Text(
                                 conversation['otherPartyName']?.toString() ??

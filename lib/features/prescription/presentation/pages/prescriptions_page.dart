@@ -85,9 +85,9 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
           final duration = map['duration']?.toString().trim() ?? '';
 
           final parts = <String>[];
-          if (name.isNotEmpty) parts.add(name);
+          if (name.isNotEmpty) parts.add('Medicine: $name');
           if (dosage.isNotEmpty) parts.add('Dose: $dosage');
-          if (frequency.isNotEmpty) parts.add('Day: $frequency');
+          if (frequency.isNotEmpty) parts.add('Frequency: $frequency');
           if (duration.isNotEmpty) parts.add('Duration: $duration');
 
           return parts.join(' • ');
@@ -331,10 +331,23 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
                             onPressed: _isCreating
                                 ? null
                                 : () async {
+                                    if (_isCreating) {
+                                      return;
+                                    }
+
+                                    setState(() {
+                                      _isCreating = true;
+                                    });
+
                                     final diagnosis =
                                         diagnosisController.text.trim();
                                     if (selectedAppointmentId.isEmpty ||
                                         diagnosis.isEmpty) {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isCreating = false;
+                                        });
+                                      }
                                       scaffoldMessenger.showSnackBar(
                                         const SnackBar(
                                             content: Text(
@@ -364,10 +377,6 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
                                             parts.length > 3 ? parts[3] : '',
                                       };
                                     }).toList();
-
-                                    setState(() {
-                                      _isCreating = true;
-                                    });
 
                                     try {
                                       await sl<ApiClient>().post(
@@ -647,6 +656,25 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
     );
   }
 
+  Widget _detailRow(String label, String value) {
+    final normalizedValue = value.trim().isEmpty ? 'Not specified' : value;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontSize: 14, color: Colors.black87),
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.normal),
+            ),
+            TextSpan(text: normalizedValue),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showDetails(BuildContext context, Map<String, dynamic> prescription) {
     final medications = prescription['medications'] is List
         ? prescription['medications'] as List
@@ -676,23 +704,39 @@ class _PrescriptionsPageState extends State<PrescriptionsPage> {
                   final map = medication is Map
                       ? medication.map((k, v) => MapEntry(k.toString(), v))
                       : <String, dynamic>{};
-                  final name = map['name']?.toString() ?? 'Medicine';
-                  final dosage = map['dosage']?.toString() ?? '';
-                  final frequency = map['frequency']?.toString() ?? '';
-                  final duration = map['duration']?.toString() ?? '';
+                  final name = map['name']?.toString().trim() ?? '';
+                  final dosage = map['dosage']?.toString().trim() ?? '';
+                  final frequency = map['frequency']?.toString().trim() ?? '';
+                  final duration = map['duration']?.toString().trim() ?? '';
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: Text('• $name  $dosage  $frequency  $duration'),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _detailRow('Medicine', name),
+                          _detailRow('Dose', dosage),
+                          _detailRow('Frequency', frequency),
+                          _detailRow('Duration', duration),
+                        ],
+                      ),
+                    ),
                   );
                 })),
                 if (medications.isEmpty)
                   const Text('No medication details found.'),
                 const SizedBox(height: 12),
-                Text(
-                    'Instructions: ${prescription['instructions']?.toString() ?? 'None'}'),
+                _detailRow('Instructions',
+                    prescription['instructions']?.toString() ?? 'None'),
                 const SizedBox(height: 8),
-                Text(
-                    'Doctor Notes: ${prescription['doctor_notes']?.toString() ?? 'None'}'),
+                _detailRow('Doctor Notes',
+                    prescription['doctor_notes']?.toString() ?? 'None'),
                 const SizedBox(height: 16),
               ],
             ),

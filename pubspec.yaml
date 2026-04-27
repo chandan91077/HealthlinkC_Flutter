@@ -1,6 +1,6 @@
 name: healthlink_connect_flutter
 description: A new Flutter project for MediConnect.
-version: 1.0.12+13
+version: 1.0.15+16
 
 environment:
   sdk: ">=3.5.0 <4.0.0"

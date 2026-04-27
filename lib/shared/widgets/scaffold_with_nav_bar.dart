@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:healthlink_connect_flutter/core/theme/app_colors.dart';
 import 'package:healthlink_connect_flutter/shared/widgets/medi_connect_header_drawer.dart';
 
 class ScaffoldWithNavBar extends StatefulWidget {
@@ -75,6 +74,7 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -89,11 +89,11 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
         bottomNavigationBar: Container(
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(20),
+                color: Theme.of(context).shadowColor.withAlpha(20),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
@@ -106,9 +106,9 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
               onTap: _onTap,
               type: BottomNavigationBarType.fixed,
               elevation: 0,
-              backgroundColor: Colors.white,
-              selectedItemColor: AppColors.primary,
-              unselectedItemColor: const Color(0xFF64748B),
+              backgroundColor: colorScheme.surface,
+              selectedItemColor: colorScheme.primary,
+              unselectedItemColor: colorScheme.onSurfaceVariant,
               selectedFontSize: 12,
               unselectedFontSize: 12,
               items: const [

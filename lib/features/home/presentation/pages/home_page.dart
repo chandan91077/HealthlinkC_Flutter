@@ -14,11 +14,12 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final double width = MediaQuery.sizeOf(context).width;
     final bool isNarrow = width < 380;
 
     return Container(
-      color: Colors.white,
+      color: colorScheme.surface,
       child: ListView(
         padding:
             EdgeInsets.fromLTRB(isNarrow ? 12 : 16, 10, isNarrow ? 12 : 16, 22),
@@ -27,15 +28,16 @@ class HomePage extends StatelessWidget {
           const SizedBox(height: 16),
           _buildStatsSection(context),
           const SizedBox(height: 20),
-          _buildSectionTitle('Everything You Need for Better Healthcare'),
+          _buildSectionTitle(
+              context, 'Everything You Need for Better Healthcare'),
           const SizedBox(height: 10),
-          _buildFeaturesSection(),
+          _buildFeaturesSection(context),
           const SizedBox(height: 20),
-          _buildSectionTitle('How It Works'),
+          _buildSectionTitle(context, 'How It Works'),
           const SizedBox(height: 10),
           _buildHowItWorksSection(context),
           const SizedBox(height: 20),
-          _buildContactSection(),
+          _buildContactSection(context),
         ],
       ),
     );
@@ -137,6 +139,8 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildStatsSection(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final List<({String value, String label})> stats = [
       (value: '50+', label: 'Verified Doctors'),
       (value: '500+', label: 'Consultations'),
@@ -166,17 +170,20 @@ class HomePage extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              gradient: index.isEven
-                  ? const LinearGradient(
-                      colors: [Color(0xFFF7FFFD), Color(0xFFEEFAF8)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : const LinearGradient(
-                      colors: [Color(0xFFF8FBFF), Color(0xFFF0F8FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+              color: isDark ? colorScheme.surface : null,
+              gradient: isDark
+                  ? null
+                  : index.isEven
+                      ? const LinearGradient(
+                          colors: [Color(0xFFF7FFFD), Color(0xFFEEFAF8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : const LinearGradient(
+                          colors: [Color(0xFFF8FBFF), Color(0xFFF0F8FF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
             child: Column(
@@ -185,18 +192,19 @@ class HomePage extends StatelessWidget {
                 Text(
                   stat.value,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
-                    color: _tealDark,
+                    color: isDark ? colorScheme.onSurface : _tealDark,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   stat.label,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Color(0xFF475569), fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -206,7 +214,9 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildFeaturesSection() {
+  Widget _buildFeaturesSection(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final List<({IconData icon, String title, String text, Color tint})>
         features = [
       (
@@ -253,10 +263,11 @@ class HomePage extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: feature.tint,
+                        color:
+                            isDark ? colorScheme.surfaceVariant : feature.tint,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(feature.icon, color: _teal),
+                      child: Icon(feature.icon, color: colorScheme.primary),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -265,15 +276,17 @@ class HomePage extends StatelessWidget {
                         children: [
                           Text(
                             feature.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 24 / 1.333,
-                                fontWeight: FontWeight.w700),
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.onSurface),
                           ),
                           const SizedBox(height: 5),
                           Text(
                             feature.text,
-                            style: const TextStyle(
-                                color: Color(0xFF475569), height: 1.35),
+                            style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                                height: 1.35),
                           ),
                         ],
                       ),
@@ -288,6 +301,8 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildHowItWorksSection(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isLoggedIn = context.watch<AuthProvider>().isAuthenticated;
 
     final List<({String number, String title})> steps = [
@@ -318,19 +333,24 @@ class HomePage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: isDark
+                            ? colorScheme.surfaceVariant
+                            : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE6EDF5)),
+                        border: Border.all(
+                            color: isDark
+                                ? colorScheme.outline
+                                : const Color(0xFFE6EDF5)),
                       ),
                       child: Row(
                         children: [
                           CircleAvatar(
                             radius: 16,
-                            backgroundColor: _teal,
+                            backgroundColor: colorScheme.primary,
                             child: Text(
                               step.number,
-                              style: const TextStyle(
-                                  color: Colors.white,
+                              style: TextStyle(
+                                  color: colorScheme.onPrimary,
                                   fontWeight: FontWeight.w700),
                             ),
                           ),
@@ -338,8 +358,9 @@ class HomePage extends StatelessWidget {
                           Expanded(
                             child: Text(
                               step.title,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurface),
                             ),
                           ),
                         ],
@@ -354,7 +375,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildContactSection() {
+  Widget _buildContactSection(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
@@ -388,13 +409,14 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 30 / 1.5,
         fontWeight: FontWeight.w800,
-        color: Color(0xFF102A2A),
+        color: colorScheme.onSurface,
       ),
     );
   }

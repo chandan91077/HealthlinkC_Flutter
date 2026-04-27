@@ -338,11 +338,12 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Text(
       title,
       style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: colorScheme.onSurface,
           ),
     );
   }
@@ -355,6 +356,7 @@ class _StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 380;
@@ -396,7 +398,7 @@ class _StatsGrid extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.grey,
+                        color: colorScheme.onSurfaceVariant,
                         fontSize: isCompact ? 12 : 13,
                         height: 1.15,
                       ),
@@ -419,6 +421,7 @@ class _ActionGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -455,7 +458,10 @@ class _ActionGrid extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
                   Text(item.caption,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      )),
                 ],
               ),
             ),
@@ -474,6 +480,7 @@ class _DashboardErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
@@ -486,7 +493,7 @@ class _DashboardErrorView extends StatelessWidget {
               const Icon(Icons.error_outline,
                   size: 56, color: Colors.redAccent),
               const SizedBox(height: 12),
-              Text(message),
+              Text(message, style: TextStyle(color: colorScheme.onSurface)),
               const SizedBox(height: 16),
               ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
             ],

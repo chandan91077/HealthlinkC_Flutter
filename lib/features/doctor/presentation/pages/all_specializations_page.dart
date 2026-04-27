@@ -88,6 +88,7 @@ class _AllSpecializationsPageState extends State<AllSpecializationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final String query = _searchController.text.trim().toLowerCase();
 
     final items = _allItems.where((item) {
@@ -101,7 +102,7 @@ class _AllSpecializationsPageState extends State<AllSpecializationsPage> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: const MediConnectHeader(),
       drawer: const MediConnectDrawer(),
       body: ListView(
@@ -143,14 +144,14 @@ class _AllSpecializationsPageState extends State<AllSpecializationsPage> {
               hintText: 'Search by specialization, category, or condition',
               prefixIcon: const Icon(Icons.search),
               filled: true,
-              fillColor: const Color(0xFFF8FAFC),
+              fillColor: colorScheme.surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                borderSide: BorderSide(color: colorScheme.outline),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                borderSide: BorderSide(color: colorScheme.outline),
               ),
             ),
           ),

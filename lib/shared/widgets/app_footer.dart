@@ -17,8 +17,9 @@ class AppFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      color: Colors.white,
+      color: colorScheme.surface,
       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
       child: Column(
         children: [
@@ -40,36 +41,35 @@ class AppFooter extends StatelessWidget {
                       'Benefits': AppRoutes.benefits,
                       'FAQ': AppRoutes.faq,
                     }),
-                    _buildContactColumn(),
-                  ],
-                );
-              } else {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildBrandColumn(context),
-                    const SizedBox(height: 32),
-                    _buildLinksColumn(context, 'Quick Links', {
-                      'Find Doctors': AppRoutes.doctors,
-                      'Specializations': AppRoutes.specializations,
-                      'About Us': AppRoutes.about,
-                      'Contact': AppRoutes.contact,
-                    }),
-                    const SizedBox(height: 24),
-                    _buildLinksColumn(context, 'For Doctors', {
-                      'Join as Doctor': AppRoutes.joinAsDoctor,
-                      'Benefits': AppRoutes.benefits,
-                      'FAQ': AppRoutes.faq,
-                    }),
-                    const SizedBox(height: 24),
-                    _buildContactColumn(),
+                    _buildContactColumn(context),
                   ],
                 );
               }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildBrandColumn(context),
+                  const SizedBox(height: 32),
+                  _buildLinksColumn(context, 'Quick Links', {
+                    'Find Doctors': AppRoutes.doctors,
+                    'Specializations': AppRoutes.specializations,
+                    'About Us': AppRoutes.about,
+                    'Contact': AppRoutes.contact,
+                  }),
+                  const SizedBox(height: 24),
+                  _buildLinksColumn(context, 'For Doctors', {
+                    'Join as Doctor': AppRoutes.joinAsDoctor,
+                    'Benefits': AppRoutes.benefits,
+                    'FAQ': AppRoutes.faq,
+                  }),
+                  const SizedBox(height: 24),
+                  _buildContactColumn(context),
+                ],
+              );
             },
           ),
           const SizedBox(height: 48),
-          const Divider(color: AppColors.border),
+          Divider(color: colorScheme.outline),
           const SizedBox(height: 24),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -78,10 +78,10 @@ class AppFooter extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       '© 2026 MediConnect. All rights reserved.',
                       style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 12),
+                          color: colorScheme.onSurfaceVariant, fontSize: 12),
                     ),
                     const SizedBox(height: 10),
                     Wrap(
@@ -107,10 +107,10 @@ class AppFooter extends StatelessWidget {
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     '© 2026 MediConnect. All rights reserved.',
-                    style:
-                        TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    style: TextStyle(
+                        color: colorScheme.onSurfaceVariant, fontSize: 12),
                   ),
                   Row(
                     children: [
@@ -137,6 +137,7 @@ class AppFooter extends StatelessWidget {
   }
 
   Widget _buildBrandColumn(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: 250,
       child: Column(
@@ -144,16 +145,16 @@ class AppFooter extends StatelessWidget {
         children: [
           InkWell(
             onTap: () => context.go(AppRoutes.home),
-            child: const Row(
+            child: Row(
               children: [
-                AppLogo(size: 32, radius: 8),
-                SizedBox(width: 8),
+                const AppLogo(size: 32, radius: 8),
+                const SizedBox(width: 8),
                 Text(
                   'MediConnect',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.secondary,
+                    color: colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -171,6 +172,7 @@ class AppFooter extends StatelessWidget {
 
   Widget _buildLinksColumn(
       BuildContext context, String title, Map<String, String> links) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -182,40 +184,42 @@ class AppFooter extends StatelessWidget {
               child: InkWell(
                 onTap: () => _navigate(context, entry.value),
                 child: Text(entry.key,
-                    style: const TextStyle(color: AppColors.textSecondary)),
+                    style: TextStyle(color: colorScheme.onSurfaceVariant)),
               ),
             )),
       ],
     );
   }
 
-  Widget _buildContactColumn() {
+  Widget _buildContactColumn(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Contact Us',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 16),
-        _buildContactItem(Icons.email_outlined, 'chandany67071@gmail.com'),
-        _buildContactItem(Icons.phone_outlined, '9682000334'),
-        _buildContactItem(Icons.location_on_outlined,
-            '123 Healthcare Ave, Medical City, MC 12345'),
+        _buildContactItem(
+            context, Icons.email_outlined, 'chandany67071@gmail.com'),
+        _buildContactItem(context, Icons.phone_outlined, '9682000334'),
+        _buildContactItem(context, Icons.location_on_outlined,
+            '125 Healthcare Ave, Medical City, MC 12345'),
       ],
     );
   }
 
-  Widget _buildContactItem(IconData icon, String text) {
+  Widget _buildContactItem(BuildContext context, IconData icon, String text) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: AppColors.primary),
+          Icon(icon, size: 18, color: colorScheme.primary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: colorScheme.onSurfaceVariant),
             ),
           ),
         ],

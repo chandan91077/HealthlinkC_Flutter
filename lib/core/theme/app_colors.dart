@@ -10,16 +10,16 @@ class AppColors {
 
   // Backgrounds
   static const Color backgroundLight = Color(0xFFF8FAFC);
-  static const Color backgroundDark = Color(0xFF020617);
+  static const Color backgroundDark = Color(0xFF000000);
 
   // Surface
   static const Color surfaceLight = Color(0xFFFFFFFF);
-  static const Color surfaceDark = Color(0xFF0F172A);
+  static const Color surfaceDark = Color(0xFF0B0B0B);
 
   // Gradient
   static const List<Color> heroGradient = [
-    Color(0xFF020617),
-    Color(0xFF0D9488),
+    Color(0xFF000000),
+    Color(0xFF052B28),
   ];
 
   // Text
@@ -35,5 +35,5 @@ class AppColors {
 
   // Border
   static const Color border = Color(0xFFE5E7EB);
-  static const Color borderDark = Color(0xFF374151);
+  static const Color borderDark = Color(0xFF1F2937);
 }

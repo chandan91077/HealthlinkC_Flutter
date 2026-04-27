@@ -24,6 +24,14 @@ class LocalNotificationService {
     );
     await _plugin.initialize(settings: settings);
 
+    _initialized = true;
+  }
+
+  Future<void> requestPermissions() async {
+    if (!_initialized) {
+      await initialize();
+    }
+
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
@@ -33,8 +41,6 @@ class LocalNotificationService {
         .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin>()
         ?.requestPermissions(alert: true, badge: true, sound: true);
-
-    _initialized = true;
   }
 
   Future<void> showSimpleNotification({

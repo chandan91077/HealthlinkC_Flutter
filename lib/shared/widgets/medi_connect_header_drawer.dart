@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
-import 'package:healthlink_connect_flutter/core/theme/app_colors.dart';
 import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 import 'package:healthlink_connect_flutter/features/doctor/presentation/pages/specializations_page.dart';
 import 'package:healthlink_connect_flutter/features/home/presentation/pages/about_page.dart';
@@ -21,6 +20,7 @@ class MediConnectHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final bool canPop = Navigator.of(context).canPop();
     final bool showBackButton = canPop || forceBackToHome;
     final auth = context.watch<AuthProvider>();
@@ -28,12 +28,12 @@ class MediConnectHeader extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
       elevation: 0,
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       automaticallyImplyLeading: false,
       leading: showBackButton
           ? IconButton(
               icon: const Icon(Icons.arrow_back_rounded),
-              color: const Color(0xFF334155),
+              color: colorScheme.onSurface,
               onPressed: () {
                 if (canPop) {
                   Navigator.pop(context);
@@ -44,16 +44,16 @@ class MediConnectHeader extends StatelessWidget implements PreferredSizeWidget {
             )
           : null,
       titleSpacing: 16,
-      title: const Row(
+      title: Row(
         children: [
-          AppLogo(size: 30, radius: 8),
-          SizedBox(width: 10),
+          const AppLogo(size: 30, radius: 8),
+          const SizedBox(width: 10),
           Flexible(
             child: Text(
               'MediConnect',
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: Color(0xFF1A2A2A),
+                color: colorScheme.onSurface,
                 fontWeight: FontWeight.w700,
                 fontSize: 20,
               ),
@@ -65,20 +65,20 @@ class MediConnectHeader extends StatelessWidget implements PreferredSizeWidget {
         if (isLoggedIn)
           IconButton(
             icon: const Icon(Icons.dashboard_outlined),
-            color: const Color(0xFF334155),
+            color: colorScheme.onSurface,
             tooltip: 'Dashboard',
             onPressed: () => _openDashboardByRole(context, auth.role),
           ),
         IconButton(
           icon: const Icon(Icons.notifications_none_rounded),
-          color: const Color(0xFF334155),
+          color: colorScheme.onSurface,
           onPressed: () => context.push(AppRoutes.notifications),
         ),
         Builder(
           builder: (context) {
             return IconButton(
               icon: const Icon(Icons.menu_rounded),
-              color: const Color(0xFF334155),
+              color: colorScheme.onSurface,
               onPressed: () => Scaffold.of(context).openDrawer(),
             );
           },
@@ -94,6 +94,7 @@ class MediConnectDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final auth = context.watch<AuthProvider>();
     final bool isLoggedIn = auth.isAuthenticated;
 
@@ -102,7 +103,7 @@ class MediConnectDrawer extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
           children: [
-            const ListTile(
+            ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(
                 'MediConnect',
@@ -157,11 +158,11 @@ class MediConnectDrawer extends StatelessWidget {
               ElevatedButton(
                 onPressed: () => context.go(AppRoutes.login),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF0D5C57),
+                  backgroundColor: colorScheme.surface,
+                  foregroundColor: colorScheme.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: Color(0xFFDBE7E7)),
+                    side: BorderSide(color: colorScheme.outline),
                   ),
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -173,7 +174,7 @@ class MediConnectDrawer extends StatelessWidget {
               ElevatedButton(
                 onPressed: () => context.go(AppRoutes.register),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: colorScheme.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -194,11 +195,11 @@ class MediConnectDrawer extends StatelessWidget {
                   context.go(AppRoutes.login);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
+                  backgroundColor: colorScheme.surface,
                   foregroundColor: const Color(0xFFB91C1C),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: Color(0xFFFECACA)),
+                    side: BorderSide(color: colorScheme.outline),
                   ),
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -218,9 +219,10 @@ class MediConnectDrawer extends StatelessWidget {
     required String label,
     required VoidCallback onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return ListTile(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      leading: Icon(icon, color: const Color(0xFF0D5C57)),
+      leading: Icon(icon, color: colorScheme.primary),
       title: Text(label),
       onTap: () {
         Navigator.of(context).pop();

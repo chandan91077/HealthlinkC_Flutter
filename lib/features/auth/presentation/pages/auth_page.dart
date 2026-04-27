@@ -70,10 +70,11 @@ class _AuthPageState extends State<AuthPage> {
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = MediaQuery.sizeOf(context).width >= 980;
+    final colorScheme = Theme.of(context).colorScheme;
 
     if (widget.embeddedInShell == true) {
       return Container(
-        color: const Color(0xFFF3F4F6),
+        color: colorScheme.surface,
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.fromLTRB(24, isDesktop ? 46 : 24, 24, 24),
@@ -89,7 +90,7 @@ class _AuthPageState extends State<AuthPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: colorScheme.surface,
       appBar: const MediConnectHeader(),
       drawer: const MediConnectDrawer(),
       body: SingleChildScrollView(
@@ -114,10 +115,11 @@ class _AuthPageState extends State<AuthPage> {
     BuildContext context, {
     required bool showBackToHome,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -127,28 +129,28 @@ class _AuthPageState extends State<AuthPage> {
           if (showBackToHome) ...[
             TextButton.icon(
               onPressed: () => context.go(AppRoutes.home),
-              icon: const Icon(Icons.arrow_back,
-                  size: 16, color: AppColors.textSecondary),
-              label: const Text('Back to home',
-                  style: TextStyle(color: AppColors.textSecondary)),
+              icon: Icon(Icons.arrow_back,
+                  size: 16, color: colorScheme.onSurfaceVariant),
+              label: Text('Back to home',
+                  style: TextStyle(color: colorScheme.onSurfaceVariant)),
             ),
             const SizedBox(height: 10),
           ],
           if (!showBackToHome)
-            const Text(
+            Text(
               'MediConnect',
               style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary),
+                  color: colorScheme.onSurface),
             )
           else
             Text(
               isLogin ? 'Sign In' : 'Create Account',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary),
+                  color: colorScheme.onSurface),
             ),
           const SizedBox(height: 22),
           _buildToggle(),
@@ -157,9 +159,9 @@ class _AuthPageState extends State<AuthPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: colorScheme.outline),
             ),
             child: isLogin ? _buildLoginForm() : _buildSignUpForm(),
           ),
@@ -169,12 +171,13 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Widget _buildToggle() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colorScheme.outline),
       ),
       child: Row(
         children: [
@@ -184,7 +187,9 @@ class _AuthPageState extends State<AuthPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: isLogin ? const Color(0xFFF3F4F6) : Colors.transparent,
+                  color: isLogin
+                      ? colorScheme.primary.withValues(alpha: 0.14)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -193,8 +198,8 @@ class _AuthPageState extends State<AuthPage> {
                   style: TextStyle(
                     fontWeight: isLogin ? FontWeight.bold : FontWeight.normal,
                     color: isLogin
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -206,8 +211,9 @@ class _AuthPageState extends State<AuthPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color:
-                      !isLogin ? const Color(0xFFF3F4F6) : Colors.transparent,
+                  color: !isLogin
+                      ? colorScheme.primary.withValues(alpha: 0.14)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -216,8 +222,8 @@ class _AuthPageState extends State<AuthPage> {
                   style: TextStyle(
                     fontWeight: !isLogin ? FontWeight.bold : FontWeight.normal,
                     color: !isLogin
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -230,14 +236,18 @@ class _AuthPageState extends State<AuthPage> {
 
   Widget _buildLoginForm() {
     final authProvider = context.watch<AuthProvider>();
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Welcome Back',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        Text('Welcome Back',
+            style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface)),
         const SizedBox(height: 8),
-        const Text('Sign in to continue your care journey.',
-            style: TextStyle(color: AppColors.textSecondary)),
+        Text('Sign in to continue your care journey.',
+            style: TextStyle(color: colorScheme.onSurface)),
         const SizedBox(height: 24),
         _buildTextField(
           'Email',
@@ -254,7 +264,7 @@ class _AuthPageState extends State<AuthPage> {
           suffixIcon: IconButton(
             icon: Icon(
               _hideLoginPassword ? Icons.visibility_off : Icons.visibility,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               size: 20,
             ),
             onPressed: () {
@@ -262,6 +272,22 @@ class _AuthPageState extends State<AuthPage> {
             },
           ),
           controller: _passwordController,
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _isSubmitting ? null : _handleForgotPassword,
+            child: const Text('Forgot Password?'),
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _isSubmitting
+                ? null
+                : () => context.push(AppRoutes.resetPassword),
+            child: const Text('Already have token? Reset now'),
+          ),
         ),
         const SizedBox(height: 18),
         SizedBox(
@@ -281,14 +307,18 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Widget _buildSignUpForm() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Create Account',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        Text('Create Account',
+            style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface)),
         const SizedBox(height: 8),
-        const Text('Join as patient or doctor in just a few steps.',
-            style: TextStyle(color: AppColors.textSecondary)),
+        Text('Join as patient or doctor in just a few steps.',
+            style: TextStyle(color: colorScheme.onSurface)),
         const SizedBox(height: 24),
         _buildTextField(
           'Full Name',
@@ -319,7 +349,7 @@ class _AuthPageState extends State<AuthPage> {
           suffixIcon: IconButton(
             icon: Icon(
               _hideSignUpPassword ? Icons.visibility_off : Icons.visibility,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               size: 20,
             ),
             onPressed: () {
@@ -337,7 +367,7 @@ class _AuthPageState extends State<AuthPage> {
           suffixIcon: IconButton(
             icon: Icon(
               _hideConfirmPassword ? Icons.visibility_off : Icons.visibility,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               size: 20,
             ),
             onPressed: () {
@@ -347,7 +377,9 @@ class _AuthPageState extends State<AuthPage> {
           controller: _confirmPasswordController,
         ),
         const SizedBox(height: 18),
-        const Text('Join as', style: TextStyle(fontWeight: FontWeight.w700)),
+        Text('Join as',
+            style: TextStyle(
+                fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
         const SizedBox(height: 10),
         Row(
           children: [
@@ -383,31 +415,43 @@ class _AuthPageState extends State<AuthPage> {
     Widget? suffixIcon,
     TextEditingController? controller,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              color: colorScheme.onSurface,
+            )),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
           obscureText: obscureText,
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w500,
+          ),
+          cursorColor: colorScheme.primary,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textSecondary),
+            hintStyle: TextStyle(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.9)),
             prefixIcon: prefixIcon != null
-                ? Icon(prefixIcon, color: AppColors.textSecondary, size: 20)
+                ? Icon(prefixIcon,
+                    color: colorScheme.onSurfaceVariant, size: 20)
                 : null,
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: const Color(0xFFF9FAFB),
+            fillColor: colorScheme.surfaceVariant.withValues(alpha: 0.45),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: colorScheme.outline),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: colorScheme.outline),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -423,34 +467,36 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Widget _buildGoogleDivider() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       children: [
-        const Expanded(child: Divider(color: AppColors.border)),
+        Expanded(child: Divider(color: colorScheme.outline)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             'or',
             style: TextStyle(
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
           ),
         ),
-        const Expanded(child: Divider(color: AppColors.border)),
+        Expanded(child: Divider(color: colorScheme.outline)),
       ],
     );
   }
 
   Widget _buildGoogleButton({required String role}) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
         onPressed: _isSubmitting ? null : () => _handleGoogleSignIn(role: role),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 13),
-          side: const BorderSide(color: AppColors.border),
-          backgroundColor: Colors.white,
+          side: BorderSide(color: colorScheme.outline),
+          backgroundColor: colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -471,7 +517,7 @@ class _AuthPageState extends State<AuthPage> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: AppColors.primary,
               ),
             ),
           ],
@@ -481,32 +527,37 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Widget _buildRoleCard(String role, IconData icon) {
+    final colorScheme = Theme.of(context).colorScheme;
     final bool isSelected = selectedRole == role;
     return GestureDetector(
       onTap: () => setState(() => selectedRole = role),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withAlpha(20) : Colors.white,
+          color: isSelected
+              ? colorScheme.primary.withValues(alpha: 0.16)
+              : colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB),
+            color: isSelected ? AppColors.primary : colorScheme.outline,
             width: 1.4,
           ),
         ),
         child: Column(
           children: [
             Icon(icon,
-                color:
-                    isSelected ? AppColors.secondary : AppColors.textSecondary,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
                 size: 24),
             const SizedBox(height: 8),
             Text(
               role,
               style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color:
-                    isSelected ? AppColors.secondary : AppColors.textSecondary,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -684,6 +735,98 @@ class _AuthPageState extends State<AuthPage> {
       );
     } catch (_) {
       _showMessage('Signup failed. Try another email or check backend.');
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final emailController = TextEditingController(
+      text: _emailController.text.trim(),
+    );
+
+    final enteredEmail = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Forgot Password'),
+          content: TextField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              hintText: 'you@example.com',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(emailController.text.trim()),
+              child: const Text('Send Link'),
+            ),
+          ],
+        );
+      },
+    );
+
+    emailController.dispose();
+
+    if (!mounted || enteredEmail == null) {
+      return;
+    }
+
+    final email = enteredEmail.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      _showMessage('Please enter a valid email address.');
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final response = await sl<ApiClient>().post(
+        '/api/auth/forgot-password',
+        data: {'email': email},
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      final data = response.data;
+      final serverMessage = data is Map<String, dynamic>
+          ? data['message']?.toString().trim() ?? ''
+          : '';
+
+      _showMessage(
+        serverMessage.isNotEmpty
+            ? serverMessage
+            : 'If the email exists, a reset link has been sent.',
+      );
+    } on DioException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final responseData = error.response?.data;
+      final message = responseData is Map<String, dynamic>
+          ? (responseData['message']?.toString().trim() ?? '')
+          : '';
+      _showMessage(
+        message.isNotEmpty
+            ? message
+            : 'Unable to process forgot password right now.',
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showMessage('Unable to process forgot password right now.');
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);

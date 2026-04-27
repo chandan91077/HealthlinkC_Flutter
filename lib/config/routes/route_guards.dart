@@ -28,6 +28,7 @@ String? routeGuard(context, GoRouterState state) {
     AppRoutes.notifications,
     AppRoutes.login,
     AppRoutes.register,
+    AppRoutes.resetPassword,
   ];
 
   final isPublicPage = publicPages.contains(state.matchedLocation);

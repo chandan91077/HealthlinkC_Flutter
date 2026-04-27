@@ -97,12 +97,8 @@ class _GlobalNotificationPollerState extends State<GlobalNotificationPoller>
                 !_seenUnreadNotificationIds.contains(notification.id))
             .toList();
 
-        final alertItems = newItems
-            .where((notification) => _shouldShowPhoneAlert(notification))
-            .toList();
-
-        if (alertItems.isNotEmpty) {
-          for (final item in alertItems.reversed) {
+        if (newItems.isNotEmpty) {
+          for (final item in newItems.reversed) {
             await sl<LocalNotificationService>().showSimpleNotification(
               title: _titleForType(item),
               body: item.message.isNotEmpty
@@ -110,8 +106,6 @@ class _GlobalNotificationPollerState extends State<GlobalNotificationPoller>
                   : 'You received a new notification.',
             );
           }
-        } else if (newItems.isNotEmpty) {
-          // Keep doctor-action updates silent on the phone while preserving them in-app.
         } else {
           final newUnreadCount = unreadCount - _lastUnreadCount;
           await sl<LocalNotificationService>().showSimpleNotification(
@@ -166,27 +160,7 @@ class _GlobalNotificationPollerState extends State<GlobalNotificationPoller>
 }
 
 bool _shouldShowPhoneAlert(_UnreadNotification notification) {
-  switch (notification.type) {
-    case 'admin_update':
-    case 'new_appointment':
-    case 'appointment_confirmed':
-    case 'payment_pending':
-    case 'preempted':
-      return true;
-    case 'chat_available':
-    case 'chat_available_confirmation':
-    case 'chat_disabled':
-    case 'chat_disabled_confirmation':
-    case 'video_link':
-    case 'video_call_started':
-    case 'video_call_started_confirmation':
-    case 'video_call_ended':
-    case 'video_call_ended_confirmation':
-    case 'new_message':
-      return false;
-    default:
-      return false;
-  }
+  return true;
 }
 
 class _UnreadNotification {

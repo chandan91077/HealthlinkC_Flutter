@@ -4,6 +4,7 @@ import 'package:healthlink_connect_flutter/config/routes/app_routes.dart';
 import 'package:healthlink_connect_flutter/config/routes/route_guards.dart';
 import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/features/auth/presentation/pages/auth_page.dart';
+import 'package:healthlink_connect_flutter/features/auth/presentation/pages/reset_password_page.dart';
 import 'package:healthlink_connect_flutter/features/auth/presentation/pages/startup_redirect_page.dart';
 import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 import 'package:healthlink_connect_flutter/features/doctor/presentation/pages/find_doctors_page.dart';
@@ -62,6 +63,12 @@ class AppRouter {
         builder: (context, state) => AuthPage(
           initialIsLogin: false,
           initialRole: state.uri.queryParameters['role'],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        builder: (context, state) => ResetPasswordPage(
+          initialToken: state.uri.queryParameters['token'] ?? '',
         ),
       ),
       // Main App Shell with Bottom Navigation

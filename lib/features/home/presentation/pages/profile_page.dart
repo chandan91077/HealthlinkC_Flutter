@@ -10,13 +10,15 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
-        title: const Text('Profile',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: Text('Profile',
+            style: TextStyle(
+                color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -30,6 +32,7 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildGuestView(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
       child: Column(
@@ -52,10 +55,14 @@ class ProfilePage extends StatelessWidget {
             style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Sign in or create an account to manage your appointments, track your health history, and connect with doctors.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.black54, fontSize: 16, height: 1.5),
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 16,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 48),
           Row(
@@ -72,7 +79,7 @@ class ProfilePage extends StatelessWidget {
                   onPressed: () => context.go(AppRoutes.register),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    side: const BorderSide(color: AppColors.primary),
+                    side: BorderSide(color: colorScheme.primary),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),

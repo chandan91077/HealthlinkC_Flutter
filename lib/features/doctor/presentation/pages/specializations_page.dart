@@ -68,6 +68,7 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final String query = _searchController.text.trim().toLowerCase();
     final List<_SpecializationItem> visibleSpecializations =
         _specializations.where((item) {
@@ -79,7 +80,7 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: const MediConnectHeader(),
       drawer: const MediConnectDrawer(),
       body: ListView(
@@ -87,15 +88,15 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
         children: [
           _buildHeroSection(),
           const SizedBox(height: 14),
-          _buildSearchBar(),
+          _buildSearchBar(context),
           const SizedBox(height: 18),
           _buildInfoSection(),
           const SizedBox(height: 20),
-          _buildSectionTitle('Popular Specializations'),
+          _buildSectionTitle(context, 'Popular Specializations'),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Comprehensive care covering all major medical fields',
-            style: TextStyle(color: Color(0xFF475569), height: 1.35),
+            style: TextStyle(color: colorScheme.onSurfaceVariant, height: 1.35),
           ),
           const SizedBox(height: 12),
           _buildSpecializationGrid(visibleSpecializations),
@@ -169,7 +170,8 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Expanded(
@@ -180,14 +182,14 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
               hintText: 'Search specializations (e.g. Heart, Skin...)',
               prefixIcon: const Icon(Icons.search),
               filled: true,
-              fillColor: const Color(0xFFF8FAFC),
+              fillColor: colorScheme.surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                borderSide: BorderSide(color: colorScheme.outline),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                borderSide: BorderSide(color: colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -215,15 +217,16 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
   }
 
   Widget _buildInfoSection() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3FAF8),
+        color: colorScheme.surfaceVariant.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDCECE8)),
+        border: Border.all(color: colorScheme.outline),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -233,7 +236,7 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
           SizedBox(height: 8),
           Text(
             'Medical specializations focus on specific parts of the body, age groups, or types of medical conditions. Consulting a specialist ensures you get expert diagnosis and the most effective treatment plan tailored to your specific health needs. At MediConnect, we bring all these experts to your fingertips.',
-            style: TextStyle(color: Color(0xFF334155), height: 1.45),
+            style: TextStyle(height: 1.45),
           ),
         ],
       ),
@@ -241,19 +244,20 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
   }
 
   Widget _buildSpecializationGrid(List<_SpecializationItem> items) {
+    final colorScheme = Theme.of(context).colorScheme;
     if (items.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
+          color: colorScheme.surfaceVariant.withValues(alpha: 0.45),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: colorScheme.outline),
         ),
-        child: const Text(
+        child: Text(
           'No specialization found for your search.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF475569)),
+          style: TextStyle(color: colorScheme.onSurfaceVariant),
         ),
       );
     }
@@ -304,7 +308,8 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE6F7F4),
+                        color:
+                            colorScheme.surfaceVariant.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(item.icon, color: const Color(0xFF0D9488)),
@@ -322,8 +327,8 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
                       item.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF475569),
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
                         height: 1.35,
                       ),
                     ),
@@ -347,6 +352,7 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
   }
 
   Widget _buildHighlightsSection() {
+    final colorScheme = Theme.of(context).colorScheme;
     const List<_FeatureHighlight> highlights = [
       _FeatureHighlight(
         icon: Icons.verified_user_outlined,
@@ -394,7 +400,8 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE6F7F4),
+                          color:
+                              colorScheme.surfaceVariant.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(item.icon, color: const Color(0xFF0D9488)),
@@ -409,8 +416,9 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
                                     fontWeight: FontWeight.w700, fontSize: 17)),
                             const SizedBox(height: 5),
                             Text(item.description,
-                                style: const TextStyle(
-                                    color: Color(0xFF475569), height: 1.35)),
+                                style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant,
+                                    height: 1.35)),
                           ],
                         ),
                       ),
@@ -425,15 +433,16 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
   }
 
   Widget _buildEasyAccessSection() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: colorScheme.surfaceVariant.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colorScheme.outline),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -443,7 +452,7 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
           SizedBox(height: 8),
           Text(
             "Finding the right doctor shouldn't be a headache. With MediConnect, you can browse profiles, check qualifications, view availability, and book appointments instantly.",
-            style: TextStyle(color: Color(0xFF334155), height: 1.45),
+            style: TextStyle(height: 1.45),
           ),
           SizedBox(height: 12),
           Text('3 Simple Steps:',
@@ -531,11 +540,11 @@ class _SpecializationsPageState extends State<SpecializationsPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Text(
       title,
-      style: const TextStyle(
-        color: Color(0xFF132E2E),
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface,
         fontSize: 24,
         fontWeight: FontWeight.w800,
       ),
@@ -575,6 +584,7 @@ class _StepRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         CircleAvatar(
@@ -588,7 +598,10 @@ class _StepRow extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(text, style: const TextStyle(color: Color(0xFF334155))),
+          child: Text(
+            text,
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
+          ),
         ),
       ],
     );

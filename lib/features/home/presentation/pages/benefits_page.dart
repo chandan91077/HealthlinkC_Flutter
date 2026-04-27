@@ -9,6 +9,7 @@ class BenefitsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final items = [
       (
         'Wider Reach',
@@ -29,7 +30,7 @@ class BenefitsPage extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: const MediConnectHeader(),
       drawer: const MediConnectDrawer(),
       body: ListView(
@@ -81,8 +82,9 @@ class BenefitsPage extends StatelessWidget {
                               fontSize: 18, fontWeight: FontWeight.w700)),
                       const SizedBox(height: 6),
                       Text(item.$2,
-                          style: const TextStyle(
-                              color: Color(0xFF334155), height: 1.35)),
+                          style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              height: 1.35)),
                     ],
                   ),
                 ),

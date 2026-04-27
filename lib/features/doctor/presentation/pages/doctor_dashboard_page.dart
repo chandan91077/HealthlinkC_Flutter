@@ -1,4 +1,5 @@
 ﻿import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
@@ -81,7 +82,16 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
     try {
       final api = sl<ApiClient>();
       final authProvider = sl<AuthProvider>();
-      final doctorUserId = authProvider.user?.id?.trim() ?? '';
+      var doctorUserId = authProvider.user?.id?.trim() ?? '';
+
+      if (doctorUserId.isEmpty) {
+        await authProvider.fetchProfile();
+        doctorUserId = authProvider.user?.id?.trim() ?? '';
+      }
+
+      if (doctorUserId.isEmpty) {
+        doctorUserId = _extractUserIdFromToken(authProvider.token);
+      }
 
       if (doctorUserId.isEmpty) {
         throw const FormatException('Unable to resolve doctor account.');
@@ -121,22 +131,22 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
       }
 
       final results = await Future.wait([
-        api.get('/api/appointments'),
-        api.get('/api/messages/conversations'),
-        api.get('/api/notifications/unread-count'),
-        api.get('/api/prescriptions'),
-        api.get('/api/payments/doctor/summary'),
+        _safeGet(api, '/api/appointments'),
+        _safeGet(api, '/api/messages/conversations'),
+        _safeGet(api, '/api/notifications/unread-count'),
+        _safeGet(api, '/api/prescriptions'),
+        _safeGet(api, '/api/payments/doctor/summary'),
       ]);
 
       if (!mounted) {
         return;
       }
 
-      final unreadCount = (results[2].data is Map<String, dynamic>)
-          ? ((results[2].data as Map<String, dynamic>)['count'] as num? ?? 0)
+      final unreadCount = (results[2]?.data is Map<String, dynamic>)
+          ? ((results[2]!.data as Map<String, dynamic>)['count'] as num? ?? 0)
               .toInt()
           : 0;
-      final paymentSummary = _mapObject(results[4].data);
+      final paymentSummary = _mapObject(results[4]?.data);
       final settledEarnings = _asNum(paymentSummary?['settled_earnings']) ?? 0;
       final unsettledEarnings =
           _asNum(paymentSummary?['unsettled_earnings']) ?? 0;
@@ -148,11 +158,11 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
         _doctorProfile = doctorProfile;
         _verificationStatus = verificationStatus;
         _rejectionReason = rejectionReason;
-        _appointments = _mapList(results[0].data);
+        _appointments = _mapList(results[0]?.data);
         _totalEarnings = totalEarnings;
-        _conversationCount = _mapList(results[1].data).length;
+        _conversationCount = _mapList(results[1]?.data).length;
         _unreadNotifications = unreadCount;
-        _prescriptionCount = _mapList(results[3].data).length;
+        _prescriptionCount = _mapList(results[3]?.data).length;
       });
     } on DioException catch (error) {
       if (!mounted) {
@@ -176,8 +186,14 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
         });
       } else {
         if (showLoader) {
+          final serverData = error.response?.data;
+          final serverMessage = serverData is Map<String, dynamic>
+              ? serverData['message']?.toString().trim()
+              : null;
           setState(() {
-            _error = 'Failed to load doctor dashboard.';
+            _error = (serverMessage != null && serverMessage.isNotEmpty)
+                ? serverMessage
+                : 'Failed to load doctor dashboard.';
           });
         }
       }
@@ -210,6 +226,14 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
     return value.whereType<Map>().map((item) {
       return item.map((key, val) => MapEntry(key.toString(), val));
     }).toList();
+  }
+
+  Future<Response?> _safeGet(ApiClient api, String path) async {
+    try {
+      return await api.get(path);
+    } catch (_) {
+      return null;
+    }
   }
 
   Map<String, dynamic>? _mapObject(dynamic value) {
@@ -253,6 +277,33 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
     final month = now.month.toString().padLeft(2, '0');
     final day = now.day.toString().padLeft(2, '0');
     return '${now.year}-$month-$day';
+  }
+
+  String _extractUserIdFromToken(String? token) {
+    if (token == null || token.isEmpty) {
+      return '';
+    }
+
+    final parts = token.split('.');
+    if (parts.length != 3) {
+      return '';
+    }
+
+    try {
+      final normalized = base64Url.normalize(parts[1]);
+      final payload = utf8.decode(base64Url.decode(normalized));
+      final data = jsonDecode(payload);
+      if (data is Map<String, dynamic>) {
+        return data['id']?.toString().trim() ?? '';
+      }
+      if (data is Map) {
+        return data['id']?.toString().trim() ?? '';
+      }
+    } catch (_) {
+      return '';
+    }
+
+    return '';
   }
 
   int get _todayCount => _appointments.where((appointment) {
@@ -912,8 +963,10 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
                                                         FontWeight.w700)),
                                             const SizedBox(height: 4),
                                             Text(item.caption,
-                                                style: const TextStyle(
-                                                    color: Colors.grey,
+                                                style: TextStyle(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
                                                     fontSize: 12)),
                                           ],
                                         ),
@@ -996,7 +1049,8 @@ class _DoctorVerificationGate extends StatelessWidget {
                   isRejected
                       ? 'Your doctor profile was not approved. Please contact support or update your profile details and reapply.'
                       : 'Your doctor account is under admin review. You will get access after verification is approved.',
-                  style: const TextStyle(color: Colors.black87),
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 ),
                 const SizedBox(height: 14),
                 Container(
@@ -1004,8 +1058,14 @@ class _DoctorVerificationGate extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isRejected
-                        ? const Color(0xFFFFF1F2)
-                        : const Color(0xFFFFF8E1),
+                        ? Theme.of(context)
+                            .colorScheme
+                            .error
+                            .withValues(alpha: 0.12)
+                        : Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -1015,7 +1075,9 @@ class _DoctorVerificationGate extends StatelessWidget {
                             ? 'Reason: Not provided by admin.'
                             : 'Verification usually takes 1-2 business days.',
                     style: TextStyle(
-                      color: isRejected ? Colors.redAccent : Colors.orange[900],
+                      color: isRejected
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1053,7 +1115,9 @@ class _DoctorStatCard extends StatelessWidget {
                     const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(title,
-                style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12)),
           ],
         ),
       ),
@@ -1160,7 +1224,9 @@ class _DoctorQueueCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         '$time • ${status.toUpperCase()}',
-                        style: const TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -1217,8 +1283,11 @@ class _DoctorEmptyBlock extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(16)),
-      child: Text(message, style: const TextStyle(color: Colors.grey)),
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16)),
+      child: Text(message,
+          style:
+              TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
     );
   }
 }

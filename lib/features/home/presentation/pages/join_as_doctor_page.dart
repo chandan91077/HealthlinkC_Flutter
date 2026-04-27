@@ -13,10 +13,11 @@ class JoinAsDoctorPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isLoggedIn = context.watch<AuthProvider>().isAuthenticated;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: const MediConnectHeader(),
       drawer: const MediConnectDrawer(),
       body: ListView(
@@ -107,6 +108,7 @@ class _DoctorPoint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 1.2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -134,8 +136,8 @@ class _DoctorPoint extends StatelessWidget {
                           fontWeight: FontWeight.w700, fontSize: 17)),
                   const SizedBox(height: 4),
                   Text(text,
-                      style: const TextStyle(
-                          color: Color(0xFF334155), height: 1.35)),
+                      style: TextStyle(
+                          color: colorScheme.onSurfaceVariant, height: 1.35)),
                 ],
               ),
             ),

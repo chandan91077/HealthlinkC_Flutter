@@ -190,11 +190,13 @@ class _AppointmentsPageState extends State<AppointmentsPage>
                       _AppointmentList(
                         appointments: _upcomingAppointments,
                         role: role,
+                        showBookAppointmentWhenEmpty: role == 'patient',
                         onAppointmentsChanged: _loadAppointments,
                       ),
                       _AppointmentList(
                         appointments: _pastAppointments,
                         role: role,
+                        showBookAppointmentWhenEmpty: false,
                         onAppointmentsChanged: _loadAppointments,
                       ),
                     ],
@@ -208,11 +210,13 @@ class _AppointmentList extends StatelessWidget {
   const _AppointmentList({
     required this.appointments,
     required this.role,
+    required this.showBookAppointmentWhenEmpty,
     required this.onAppointmentsChanged,
   });
 
   final List<Map<String, dynamic>> appointments;
   final String role;
+  final bool showBookAppointmentWhenEmpty;
   final Future<void> Function() onAppointmentsChanged;
 
   Future<void> _confirmAndMarkDone(
@@ -281,9 +285,19 @@ class _AppointmentList extends StatelessWidget {
     if (appointments.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 80),
-          Center(child: Text('No appointments found.')),
+        children: [
+          const SizedBox(height: 80),
+          const Center(child: Text('No appointments found.')),
+          if (showBookAppointmentWhenEmpty) ...[
+            const SizedBox(height: 16),
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: () => context.go(AppRoutes.doctors),
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('Book Appointment'),
+              ),
+            ),
+          ],
         ],
       );
     }

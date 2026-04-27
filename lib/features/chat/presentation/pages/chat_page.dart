@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
@@ -31,6 +32,9 @@ class _ChatPageState extends State<ChatPage> {
 
   List<Map<String, dynamic>> _messages = const [];
   Map<String, dynamic>? _appointment;
+  bool _isPolling = false;
+  String _messagesFingerprint = '';
+  String _appointmentFingerprint = '';
 
   Timer? _pollTimer;
 
@@ -39,8 +43,37 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     _loadChatData();
     _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (!mounted || _isLoading || _isPolling) {
+        return;
+      }
       _loadMessagesSilently();
     });
+  }
+
+  String _buildMessagesFingerprint(List<Map<String, dynamic>> messages) {
+    return messages
+        .map(
+          (message) =>
+              '${message['_id'] ?? message['id'] ?? ''}|${message['createdAt'] ?? message['created_at'] ?? ''}|${message['message_type'] ?? ''}|${message['content'] ?? ''}|${message['file_url'] ?? ''}|${message['is_read'] ?? ''}',
+        )
+        .join('~');
+  }
+
+  String _buildAppointmentFingerprint(Map<String, dynamic>? appointment) {
+    if (appointment == null) {
+      return '';
+    }
+    final video = appointment['video'];
+    final doctorInCall = video is Map ? video['doctorInCall'] : null;
+    final payload = {
+      'chat_unlocked': appointment['chat_unlocked'],
+      'video_unlocked': appointment['video_unlocked'],
+      'zoom_join_url': appointment['zoom_join_url'],
+      'meeting_time': appointment['meeting_time'],
+      'meeting_provider': appointment['meeting_provider'],
+      'doctorInCall': doctorInCall,
+    };
+    return jsonEncode(payload);
   }
 
   String get _role => context.read<AuthProvider>().role ?? 'patient';
@@ -78,6 +111,12 @@ class _ChatPageState extends State<ChatPage> {
               .toList()
           : <Map<String, dynamic>>[];
 
+      parsedMessages.sort(
+        (a, b) => _messageSortTimestamp(b).compareTo(
+          _messageSortTimestamp(a),
+        ),
+      );
+
       if (!mounted) {
         return;
       }
@@ -89,6 +128,8 @@ class _ChatPageState extends State<ChatPage> {
             appointmentMap['zoom_join_url']?.toString() ?? '';
         _meetingTimeController.text =
             appointmentMap['meeting_time']?.toString() ?? '';
+        _messagesFingerprint = _buildMessagesFingerprint(parsedMessages);
+        _appointmentFingerprint = _buildAppointmentFingerprint(appointmentMap);
       });
 
       await _markRead();
@@ -109,6 +150,10 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _loadMessagesSilently() async {
+    if (_isPolling) {
+      return;
+    }
+    _isPolling = true;
     try {
       final responses = await Future.wait([
         sl<ApiClient>().get(
@@ -126,6 +171,12 @@ class _ChatPageState extends State<ChatPage> {
               .toList()
           : <Map<String, dynamic>>[];
 
+      parsedMessages.sort(
+        (a, b) => _messageSortTimestamp(b).compareTo(
+          _messageSortTimestamp(a),
+        ),
+      );
+
       final appointmentData = responses[1].data;
       final appointmentMap = appointmentData is Map<String, dynamic>
           ? appointmentData
@@ -136,12 +187,31 @@ class _ChatPageState extends State<ChatPage> {
       if (!mounted) {
         return;
       }
+      final nextMessagesFingerprint = _buildMessagesFingerprint(parsedMessages);
+      final nextAppointmentFingerprint =
+          _buildAppointmentFingerprint(appointmentMap);
+      final hasMessagesChanged =
+          nextMessagesFingerprint != _messagesFingerprint;
+      final hasAppointmentChanged =
+          nextAppointmentFingerprint != _appointmentFingerprint;
+
+      if (!hasMessagesChanged && !hasAppointmentChanged) {
+        return;
+      }
+
       setState(() {
         _messages = parsedMessages;
         _appointment = appointmentMap;
+        _messagesFingerprint = nextMessagesFingerprint;
+        _appointmentFingerprint = nextAppointmentFingerprint;
       });
-      await _markRead();
-    } catch (_) {}
+      if (hasMessagesChanged) {
+        await _markRead();
+      }
+    } catch (_) {
+    } finally {
+      _isPolling = false;
+    }
   }
 
   Future<void> _markRead() async {
@@ -508,6 +578,34 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _callActionsCard() {
+    final colorScheme = Theme.of(context).colorScheme;
+    if (_sessionEndedForPatient) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Video session ended by doctor.',
+              style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Join Call is no longer available for this appointment.',
+              style:
+                  TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      );
+    }
+
     final video = _appointment?['video'];
     final doctorLink =
         video is Map ? (video['doctorJoinUrl']?.toString() ?? '') : '';
@@ -547,7 +645,7 @@ class _ChatPageState extends State<ChatPage> {
                 : (_doctorInCall
                     ? 'Doctor is in call. You can join now.'
                     : 'Waiting for doctor to join call.'),
-            style: const TextStyle(color: Colors.black54, fontSize: 12),
+            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
           ),
           const SizedBox(height: 10),
           Row(
@@ -838,6 +936,24 @@ class _ChatPageState extends State<ChatPage> {
     return DateTime.tryParse(raw)?.toLocal();
   }
 
+  DateTime _messageSortTimestamp(Map<String, dynamic> message) {
+    final candidates = [
+      message['createdAt'],
+      message['created_at'],
+      message['updatedAt'],
+      message['updated_at'],
+    ];
+
+    for (final candidate in candidates) {
+      final timestamp = DateTime.tryParse(candidate?.toString() ?? '');
+      if (timestamp != null) {
+        return timestamp.toLocal();
+      }
+    }
+
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
   bool _isSameCalendarDate(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
@@ -862,20 +978,21 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _dateSeparator(String label) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.grey[200],
+            color: colorScheme.surfaceVariant.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Colors.black54,
+              color: colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -885,6 +1002,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _messageBubble(Map<String, dynamic> message, {DateTime? timestamp}) {
+    final colorScheme = Theme.of(context).colorScheme;
     final mine = _isMine(message);
     final type = message['message_type']?.toString() ?? 'text';
     final content = message['content']?.toString() ?? '';
@@ -895,7 +1013,9 @@ class _ChatPageState extends State<ChatPage> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 290),
         child: Card(
-          color: mine ? AppColors.primary : Colors.grey[100],
+          color: mine
+              ? AppColors.primary
+              : colorScheme.surfaceVariant.withValues(alpha: 0.45),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -919,7 +1039,9 @@ class _ChatPageState extends State<ChatPage> {
                         errorBuilder: (_, __, ___) => Text(
                           'Image unavailable',
                           style: TextStyle(
-                              color: mine ? Colors.white70 : Colors.black54),
+                              color: mine
+                                  ? Colors.white70
+                                  : colorScheme.onSurfaceVariant),
                         ),
                       ),
                     ),
@@ -953,8 +1075,8 @@ class _ChatPageState extends State<ChatPage> {
                     const SizedBox(height: 6),
                   Text(
                     content,
-                    style:
-                        TextStyle(color: mine ? Colors.white : Colors.black87),
+                    style: TextStyle(
+                        color: mine ? Colors.white : colorScheme.onSurface),
                   ),
                 ],
                 if (timestamp != null) ...[
@@ -963,7 +1085,8 @@ class _ChatPageState extends State<ChatPage> {
                     _timeLabel(timestamp),
                     style: TextStyle(
                       fontSize: 11,
-                      color: mine ? Colors.white70 : Colors.black54,
+                      color:
+                          mine ? Colors.white70 : colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -976,11 +1099,12 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _inputArea() {
+    final colorScheme = Theme.of(context).colorScheme;
     final canSend = _isDoctor || _chatUnlocked;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -1009,7 +1133,7 @@ class _ChatPageState extends State<ChatPage> {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: colorScheme.surfaceVariant.withValues(alpha: 0.45),
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
@@ -1048,11 +1172,33 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
-            const CircleAvatar(radius: 16, child: Icon(Icons.person, size: 20)),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const CircleAvatar(
+                    radius: 16, child: Icon(Icons.person, size: 20)),
+                if (_chatUnlocked)
+                  Positioned(
+                    right: -1,
+                    bottom: -1,
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                        border:
+                            Border.all(color: colorScheme.surface, width: 1.5),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,

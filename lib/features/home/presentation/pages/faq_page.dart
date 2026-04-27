@@ -9,8 +9,9 @@ class FaqPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: const MediConnectHeader(),
       drawer: const MediConnectDrawer(),
       body: ListView(
@@ -82,6 +83,7 @@ class _FaqItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 1.2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -96,7 +98,8 @@ class _FaqItem extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(answer,
-                style: const TextStyle(color: Color(0xFF334155), height: 1.35)),
+                style: TextStyle(
+                    color: colorScheme.onSurfaceVariant, height: 1.35)),
           ),
         ],
       ),

@@ -10,6 +10,7 @@ import 'package:healthlink_connect_flutter/features/home/presentation/pages/faq_
 import 'package:healthlink_connect_flutter/features/home/presentation/pages/join_as_doctor_page.dart';
 import 'package:healthlink_connect_flutter/features/home/presentation/pages/privacy_policy_page.dart';
 import 'package:healthlink_connect_flutter/features/home/presentation/pages/terms_of_service_page.dart';
+import 'package:healthlink_connect_flutter/shared/widgets/app_footer.dart';
 import 'package:healthlink_connect_flutter/shared/widgets/medi_connect_header_drawer.dart';
 
 class AboutPage extends StatelessWidget {
@@ -20,8 +21,9 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: const MediConnectHeader(),
       drawer: const MediConnectDrawer(),
       body: ListView(
@@ -33,27 +35,27 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: 20),
           _buildSectionTitle('How MediConnect Works'),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             "We've simplified healthcare access through our secure and intuitive platform",
-            style: TextStyle(color: Color(0xFF475569), height: 1.4),
+            style: TextStyle(color: colorScheme.onSurfaceVariant, height: 1.4),
           ),
           const SizedBox(height: 10),
           _buildHowItWorks(),
           const SizedBox(height: 20),
           _buildSectionTitle('Why Choose MediConnect?'),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'We combine technology with compassion to deliver exceptional healthcare experiences',
-            style: TextStyle(color: Color(0xFF475569), height: 1.4),
+            style: TextStyle(color: colorScheme.onSurfaceVariant, height: 1.4),
           ),
           const SizedBox(height: 10),
           _buildWhyChoose(),
           const SizedBox(height: 20),
           _buildSectionTitle('Our Core Values'),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'The principles that guide everything we do',
-            style: TextStyle(color: Color(0xFF475569), height: 1.4),
+            style: TextStyle(color: colorScheme.onSurfaceVariant, height: 1.4),
           ),
           const SizedBox(height: 10),
           _buildValues(),
@@ -64,7 +66,7 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: 20),
           _buildCta(context),
           const SizedBox(height: 20),
-          _buildFooter(context),
+          const AppFooter(),
         ],
       ),
     );
@@ -253,6 +255,8 @@ class AboutPage extends StatelessWidget {
   }
 
   Widget _buildStats() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final stats = [
       ('500+', 'Verified Doctors'),
       ('50,000+', 'Happy Patients'),
@@ -279,25 +283,28 @@ class AboutPage extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              gradient: index.isEven
-                  ? const LinearGradient(
-                      colors: [Color(0xFFF6FFFC), Color(0xFFEAF8F6)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : const LinearGradient(
-                      colors: [Color(0xFFF8FBFF), Color(0xFFEEF4FD)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+              color: isDark ? colorScheme.surface : null,
+              gradient: isDark
+                  ? null
+                  : index.isEven
+                      ? const LinearGradient(
+                          colors: [Color(0xFFF6FFFC), Color(0xFFEAF8F6)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : const LinearGradient(
+                          colors: [Color(0xFFF8FBFF), Color(0xFFEEF4FD)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   stat.$1,
-                  style: const TextStyle(
-                    color: _tealDark,
+                  style: TextStyle(
+                    color: isDark ? colorScheme.onSurface : _tealDark,
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
                   ),
@@ -305,8 +312,8 @@ class AboutPage extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   stat.$2,
-                  style: const TextStyle(
-                    color: Color(0xFF475569),
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -319,15 +326,16 @@ class AboutPage extends StatelessWidget {
   }
 
   Widget _buildTrustSection() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3FAF8),
+        color: colorScheme.surfaceVariant.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFDDEDE9)),
+        border: Border.all(color: colorScheme.outline),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -335,13 +343,12 @@ class AboutPage extends StatelessWidget {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF123636),
             ),
           ),
           SizedBox(height: 10),
           Text(
             "At MediConnect, we understand that healthcare is personal. That's why we've built our platform with industry-leading security standards. All doctors are verified, licensed professionals. Your medical data is encrypted and protected. Every consultation is confidential and secure.",
-            style: TextStyle(height: 1.45, color: Color(0xFF334155)),
+            style: TextStyle(height: 1.45, color: colorScheme.onSurfaceVariant),
           ),
           SizedBox(height: 12),
           _TrustPoint(text: 'End-to-end encrypted consultations'),
@@ -565,7 +572,9 @@ class AboutPage extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(body,
-                style: const TextStyle(color: Color(0xFF475569), height: 1.45)),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.45)),
           ],
         ),
       ),
@@ -589,7 +598,10 @@ class AboutPage extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE6F7F4),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceVariant
+                        .withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(icon, color: _teal),
@@ -607,8 +619,10 @@ class AboutPage extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         body,
-                        style: const TextStyle(
-                            color: Color(0xFF475569), height: 1.35),
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            height: 1.35),
                       ),
                     ],
                   ),
@@ -624,8 +638,8 @@ class AboutPage extends StatelessWidget {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
-        color: Color(0xFF132E2E),
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface,
         fontSize: 24,
         fontWeight: FontWeight.w800,
       ),
@@ -748,8 +762,9 @@ class _NumberedStep extends StatelessWidget {
                           fontWeight: FontWeight.w700, fontSize: 17)),
                   const SizedBox(height: 5),
                   Text(body,
-                      style: const TextStyle(
-                          color: Color(0xFF475569), height: 1.4)),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          height: 1.4)),
                 ],
               ),
             ),
@@ -776,7 +791,8 @@ class _TrustPoint extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: Color(0xFF334155)),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
         ],

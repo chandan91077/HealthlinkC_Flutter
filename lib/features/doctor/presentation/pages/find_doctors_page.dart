@@ -148,6 +148,7 @@ class _FindDoctorsPageState extends State<FindDoctorsPage> {
   void _openCertificate(Map<String, dynamic> doctor) {
     final certificateUrl = doctor['medical_license_url']?.toString() ?? '';
     final name = _doctorName(doctor);
+    final colorScheme = Theme.of(context).colorScheme;
 
     showModalBottomSheet(
       context: context,
@@ -180,19 +181,21 @@ class _FindDoctorsPageState extends State<FindDoctorsPage> {
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => Container(
                           padding: const EdgeInsets.all(16),
-                          color: Colors.grey.shade100,
-                          child: const Text(
+                          color: colorScheme.surfaceVariant
+                              .withValues(alpha: 0.45),
+                          child: Text(
                             'Certificate preview is not available as image.',
-                            style: TextStyle(color: Colors.black54),
+                            style:
+                                TextStyle(color: colorScheme.onSurfaceVariant),
                           ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Pinch to zoom certificate image.',
-                    style: TextStyle(color: Colors.black54),
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
                 const SizedBox(height: 16),
@@ -213,16 +216,17 @@ class _FindDoctorsPageState extends State<FindDoctorsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final canBookAppointment = sl<AuthProvider>().role != 'doctor';
     final visibleCount = _visibleDoctors.length;
 
     return Container(
-      color: Colors.white,
+      color: colorScheme.surface,
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-            color: AppColors.backgroundLight,
+            color: colorScheme.surface,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -236,7 +240,7 @@ class _FindDoctorsPageState extends State<FindDoctorsPage> {
                 const SizedBox(height: 4),
                 Text(
                   '$visibleCount doctors available',
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -254,7 +258,8 @@ class _FindDoctorsPageState extends State<FindDoctorsPage> {
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor:
+                        colorScheme.surfaceVariant.withValues(alpha: 0.45),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -451,9 +456,9 @@ class _FindDoctorsPageState extends State<FindDoctorsPage> {
                                                 bio,
                                                 maxLines: 3,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  color:
-                                                      AppColors.textSecondary,
+                                                style: TextStyle(
+                                                  color: colorScheme
+                                                      .onSurfaceVariant,
                                                 ),
                                               ),
                                             ],

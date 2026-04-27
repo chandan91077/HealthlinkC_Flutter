@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -18,13 +20,16 @@ class BookAppointmentPage extends StatefulWidget {
 class _BookAppointmentPageState extends State<BookAppointmentPage> {
   bool _isLoading = true;
   bool _isBooking = false;
+  bool _isLoadingBookedSlots = false;
   String? _error;
+  Timer? _slotRefreshTimer;
 
   DateTime _selectedDate = DateTime.now();
   String _selectedSlot = '';
   String _appointmentType = 'scheduled';
   Map<String, dynamic>? _doctor;
   List<Map<String, dynamic>> _availability = const [];
+  Set<String> _bookedSlots = <String>{};
   final TextEditingController _notesController = TextEditingController();
 
   @override
@@ -47,13 +52,25 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       return;
     }
 
+    _startSlotAutoRefresh();
     _loadData();
   }
 
   @override
   void dispose() {
+    _slotRefreshTimer?.cancel();
     _notesController.dispose();
     super.dispose();
+  }
+
+  void _startSlotAutoRefresh() {
+    _slotRefreshTimer?.cancel();
+    _slotRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || _isLoading || _isLoadingBookedSlots) {
+        return;
+      }
+      _loadBookedSlots();
+    });
   }
 
   Future<void> _loadData() async {
@@ -92,6 +109,8 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                 : null;
         _availability = availability;
       });
+
+      await _loadBookedSlots();
     } catch (_) {
       if (!mounted) {
         return;
@@ -104,6 +123,65 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadBookedSlots() async {
+    if (!mounted) {
+      return;
+    }
+
+    if (_isLoadingBookedSlots) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingBookedSlots = true;
+    });
+
+    try {
+      final date = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      final response = await sl<ApiClient>().get(
+        '/api/appointments/doctor/${widget.doctorId}',
+        queryParameters: {'date': date},
+      );
+
+      final raw = response.data;
+      final appointments = raw is List
+          ? raw
+              .whereType<Map>()
+              .map((item) => item.map((k, v) => MapEntry(k.toString(), v)))
+              .toList()
+          : <Map<String, dynamic>>[];
+
+      final bookedSlots = appointments
+          .map((appointment) => appointment['appointment_time']?.toString())
+          .whereType<String>()
+          .map((time) => time.trim())
+          .where((time) => time.isNotEmpty)
+          .toSet();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _bookedSlots = bookedSlots;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _bookedSlots = <String>{};
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingBookedSlots = false;
         });
       }
     }
@@ -239,6 +317,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   Future<void> _showCertificateSheet() async {
     final certificateUrl =
         _resolveImageUrl(_doctor?['medical_license_url']?.toString());
+    final colorScheme = Theme.of(context).colorScheme;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -271,19 +350,21 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => Container(
                           padding: const EdgeInsets.all(16),
-                          color: Colors.grey.shade100,
-                          child: const Text(
+                          color: colorScheme.surfaceVariant
+                              .withValues(alpha: 0.45),
+                          child: Text(
                             'Certificate preview is not available as image.',
-                            style: TextStyle(color: Colors.black54),
+                            style:
+                                TextStyle(color: colorScheme.onSurfaceVariant),
                           ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'Pinch to zoom certificate image.',
-                    style: TextStyle(color: Colors.black54),
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -362,6 +443,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final user = _doctor?['user_id'];
     final doctorName = _doctorDisplayName(
       user is Map<String, dynamic> ? user['full_name']?.toString() : null,
@@ -415,7 +497,8 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodyMedium
-                                      ?.copyWith(color: Colors.grey)),
+                                      ?.copyWith(
+                                          color: colorScheme.onSurfaceVariant)),
                               const SizedBox(height: 2),
                               Text(
                                 'Consultation Fee: ₹${(_doctor?['consultation_fee'] as num?)?.toInt() ?? 0}',
@@ -453,6 +536,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                                 _appointmentType = 'scheduled';
                                 _selectedSlot = '';
                               });
+                              _loadBookedSlots();
                             },
                           ),
                           ChoiceChip(
@@ -464,6 +548,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                                 _appointmentType = 'emergency';
                                 _selectedSlot = '';
                               });
+                              _loadBookedSlots();
                             },
                           ),
                         ],
@@ -493,22 +578,26 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                                 date.month == _selectedDate.month;
 
                             return GestureDetector(
-                              onTap: () => setState(() {
-                                _selectedDate = date;
-                                _selectedSlot = '';
-                              }),
+                              onTap: () async {
+                                setState(() {
+                                  _selectedDate = date;
+                                  _selectedSlot = '';
+                                });
+                                await _loadBookedSlots();
+                              },
                               child: Container(
                                 width: 70,
                                 margin: const EdgeInsets.only(right: 12),
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? AppColors.primary
-                                      : Colors.white,
+                                      : colorScheme.surfaceVariant
+                                          .withValues(alpha: 0.35),
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     color: isSelected
                                         ? AppColors.primary
-                                        : Colors.grey.withValues(alpha: 0.3),
+                                        : colorScheme.outline,
                                   ),
                                 ),
                                 child: Column(
@@ -519,7 +608,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                                       style: TextStyle(
                                           color: isSelected
                                               ? Colors.white
-                                              : Colors.grey),
+                                              : colorScheme.onSurfaceVariant),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -527,7 +616,7 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                                       style: TextStyle(
                                         color: isSelected
                                             ? Colors.white
-                                            : Colors.black,
+                                            : colorScheme.onSurface,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18,
                                       ),
@@ -552,16 +641,21 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                           'Doctor is not available on selected date.',
                           style: TextStyle(color: Colors.redAccent),
                         )
+                      else if (_isLoadingBookedSlots)
+                        Text(
+                          'Checking booked slots...',
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        )
                       else if (_daySlots.isEmpty)
                         const Text(
                           'No slots available for selected date.',
                           style: TextStyle(color: Colors.redAccent),
                         ),
                       if (_morningSlots.isNotEmpty) ...[
-                        const Text('Morning',
+                        Text('Morning',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey)),
+                                color: colorScheme.onSurfaceVariant)),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 12,
@@ -573,10 +667,10 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                       ],
                       if (_afternoonSlots.isNotEmpty) ...[
                         const SizedBox(height: 24),
-                        const Text('Afternoon',
+                        Text('Afternoon',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey)),
+                                color: colorScheme.onSurfaceVariant)),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 12,
@@ -598,9 +692,9 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
+                      Text(
                         'You will be redirected to secure payment on the next page.',
-                        style: TextStyle(color: AppColors.textSecondary),
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
                       ),
                       Container(
                         width: double.infinity,
@@ -650,19 +744,45 @@ class _BookAppointmentPageState extends State<BookAppointmentPage> {
   }
 
   Widget _buildSlotChip(String time) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isBooked = _bookedSlots.contains(time);
+    final isEmergency = _appointmentType == 'emergency';
+    final isDisabled = isBooked && !isEmergency;
     final isSelected = _selectedSlot == time;
-    return ChoiceChip(
-      label: Text(_displayTime(time)),
-      selected: isSelected,
-      onSelected: (selected) {
-        if (selected) {
-          setState(() => _selectedSlot = time);
-        }
-      },
-      selectedColor: AppColors.primary,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.black87,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+    return Opacity(
+      opacity: isBooked ? 0.45 : 1,
+      child: ChoiceChip(
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_displayTime(time)),
+            if (isBooked) ...[
+              const SizedBox(width: 6),
+              Text(
+                isEmergency ? '(booked)' : '(filled)',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isSelected
+                      ? Colors.white70
+                      : colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+        selected: isSelected,
+        onSelected: isDisabled
+            ? null
+            : (selected) {
+                if (selected) {
+                  setState(() => _selectedSlot = time);
+                }
+              },
+        selectedColor: AppColors.primary,
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : colorScheme.onSurface,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
       ),
     );
   }

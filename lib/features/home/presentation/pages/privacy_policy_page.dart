@@ -9,8 +9,9 @@ class PrivacyPolicyPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: const MediConnectHeader(),
       drawer: const MediConnectDrawer(),
       body: ListView(
@@ -89,11 +90,11 @@ class PrivacyPolicyPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF3FAF8),
+              color: colorScheme.surfaceVariant.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFDCECE8)),
+              border: Border.all(color: colorScheme.outline),
             ),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(Icons.contact_support_outlined, color: _teal),
@@ -101,7 +102,8 @@ class PrivacyPolicyPage extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Questions about privacy? Contact us at chandany67071@gmail.com.',
-                    style: TextStyle(color: Color(0xFF334155), height: 1.35),
+                    style: TextStyle(
+                        color: colorScheme.onSurfaceVariant, height: 1.35),
                   ),
                 ),
               ],
@@ -126,6 +128,7 @@ class _PolicySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 1.2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -156,8 +159,8 @@ class _PolicySection extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     body,
-                    style:
-                        const TextStyle(color: Color(0xFF334155), height: 1.4),
+                    style: TextStyle(
+                        color: colorScheme.onSurfaceVariant, height: 1.4),
                   ),
                 ],
               ),

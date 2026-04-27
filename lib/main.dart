@@ -39,7 +39,8 @@ void main() {
     try {
       await sl<LocalNotificationService>().initialize();
     } catch (e) {
-      debugPrint('[MediConnect] LocalNotificationService.initialize failed: $e');
+      debugPrint(
+          '[MediConnect] LocalNotificationService.initialize failed: $e');
     }
 
     runApp(const App());

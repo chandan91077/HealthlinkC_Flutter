@@ -60,10 +60,11 @@ class _ProfileBodyState extends State<_ProfileBody> {
   }
 
   void _openEditSheet() {
+    final colorScheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -171,10 +172,12 @@ class _ProfileBodyState extends State<_ProfileBody> {
       return;
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -349,6 +352,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final authProvider = widget.authProvider;
     final user = authProvider.user;
     final avatarUrl = _doctorAvatarUrl(user);
@@ -453,7 +457,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
                               'Tap camera icon to update photo',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.textSecondary,
+                                color: AppColors.primary,
                               ),
                             ),
                           ],
@@ -474,7 +478,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                                  color: AppColors.textSecondary,
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
                           ),
                           if (user?.phone?.isNotEmpty ?? false) ...[
@@ -485,7 +489,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
                                   .textTheme
                                   .bodySmall
                                   ?.copyWith(
-                                    color: AppColors.textSecondary,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                             ),
                           ],
@@ -802,7 +806,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.bold,
                 ),
           ),
@@ -810,11 +814,14 @@ class _ProfileBodyState extends State<_ProfileBody> {
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withValues(
+                    alpha: Theme.of(context).brightness == Brightness.dark
+                        ? 0.22
+                        : 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
@@ -840,7 +847,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.bold,
                 ),
           ),
@@ -848,11 +855,14 @@ class _ProfileBodyState extends State<_ProfileBody> {
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withValues(
+                    alpha: Theme.of(context).brightness == Brightness.dark
+                        ? 0.22
+                        : 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
@@ -1149,10 +1159,8 @@ class _InfoRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppColors.textSecondary),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 2),
                 Text(

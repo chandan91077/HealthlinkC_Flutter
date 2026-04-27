@@ -83,33 +83,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Future<void> _showChangePasswordDialog() async {
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Change Password'),
-          content: const Text(
-            'Password change is not available in-app yet. Please use the login screen reset flow.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Close'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                context.go(AppRoutes.login);
-              },
-              child: const Text('Go to Login'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _updateDarkMode(
     AppPreferencesProvider preferences,
     bool enabled,
@@ -202,6 +175,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 onChanged: (val) => _updateDarkMode(preferences, val),
                 secondary: const Icon(Icons.dark_mode_outlined),
               ),
+              ListTile(
+                leading: const Icon(Icons.lock_reset_outlined),
+                title: const Text('Reset Password'),
+                subtitle: const Text('Set a new password using reset token'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(AppRoutes.resetPassword),
+              ),
               const Divider(),
               _buildSectionHeader('Security'),
               SwitchListTile(
@@ -211,12 +191,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 onChanged: (val) =>
                     _updateBiometricPreference(preferences, val),
                 secondary: const Icon(Icons.fingerprint),
-              ),
-              ListTile(
-                leading: const Icon(Icons.lock_outline),
-                title: const Text('Change Password'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _showChangePasswordDialog,
               ),
               const Divider(),
               _buildSectionHeader('Support'),
