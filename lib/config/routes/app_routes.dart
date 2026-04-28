@@ -26,6 +26,7 @@ class AppRoutes {
   static const String settings = '/settings';
   static const String videoCall = '/video';
   static const String payment = '/payment';
+  static const String paymentHistory = '/payment-history';
   static const String prescriptions = '/prescriptions';
   static const String emergency = '/emergency';
   static const String medicalRecords = '/records';

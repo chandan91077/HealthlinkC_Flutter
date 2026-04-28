@@ -18,6 +18,9 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _notificationsEnabled = true;
+  bool _emailNotificationsEnabled = false;
+  bool _appointmentNotificationsEnabled = true;
+  bool _videoCallNotificationsEnabled = true;
   bool _didInitFromProfile = false;
   final LocalAuthentication _localAuth = LocalAuthentication();
 
@@ -30,6 +33,10 @@ class _SettingsPageState extends State<SettingsPage> {
     final user = authProvider.user;
     if (user != null) {
       _notificationsEnabled = user.notificationPreferences.push;
+      _emailNotificationsEnabled = user.notificationPreferences.email;
+      _appointmentNotificationsEnabled =
+          user.notificationPreferences.appointments;
+      _videoCallNotificationsEnabled = user.notificationPreferences.videoCalls;
       _didInitFromProfile = true;
     }
   }
@@ -72,6 +79,135 @@ class _SettingsPageState extends State<SettingsPage> {
           enabled
               ? 'Push notifications enabled'
               : 'Push notifications disabled',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateEmailNotifications(
+    AuthProvider authProvider,
+    bool enabled,
+  ) async {
+    final user = authProvider.user;
+    if (user == null) return;
+
+    setState(() => _emailNotificationsEnabled = enabled);
+
+    final success = await authProvider.updateProfile(
+      fullName: user.name ?? '',
+      phone: user.phone ?? '',
+      locale: user.locale,
+      notificationPreferences: user.notificationPreferences.copyWith(
+        email: enabled,
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (!success) {
+      setState(() => _emailNotificationsEnabled = !enabled);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text(authProvider.errorMessage ?? 'Failed to update settings'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          enabled
+              ? 'Email notifications enabled'
+              : 'Email notifications disabled',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateAppointmentNotifications(
+    AuthProvider authProvider,
+    bool enabled,
+  ) async {
+    final user = authProvider.user;
+    if (user == null) return;
+
+    setState(() => _appointmentNotificationsEnabled = enabled);
+
+    final success = await authProvider.updateProfile(
+      fullName: user.name ?? '',
+      phone: user.phone ?? '',
+      locale: user.locale,
+      notificationPreferences: user.notificationPreferences.copyWith(
+        appointments: enabled,
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (!success) {
+      setState(() => _appointmentNotificationsEnabled = !enabled);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text(authProvider.errorMessage ?? 'Failed to update settings'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          enabled
+              ? 'Appointment notifications enabled'
+              : 'Appointment notifications disabled',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateVideoCallNotifications(
+    AuthProvider authProvider,
+    bool enabled,
+  ) async {
+    final user = authProvider.user;
+    if (user == null) return;
+
+    setState(() => _videoCallNotificationsEnabled = enabled);
+
+    final success = await authProvider.updateProfile(
+      fullName: user.name ?? '',
+      phone: user.phone ?? '',
+      locale: user.locale,
+      notificationPreferences: user.notificationPreferences.copyWith(
+        videoCalls: enabled,
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (!success) {
+      setState(() => _videoCallNotificationsEnabled = !enabled);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text(authProvider.errorMessage ?? 'Failed to update settings'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          enabled
+              ? 'Video call notifications enabled'
+              : 'Video call notifications disabled',
         ),
       ),
     );
@@ -157,11 +293,10 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           body: ListView(
             children: [
-              _buildSectionHeader('Preferences'),
+              _buildSectionHeader('Notifications'),
               SwitchListTile(
                 title: const Text('Push Notifications'),
-                subtitle:
-                    const Text('Receive alerts for appointments and messages'),
+                subtitle: const Text('Receive alerts on your device'),
                 value: _notificationsEnabled,
                 onChanged: authProvider.isLoading
                     ? null
@@ -169,12 +304,44 @@ class _SettingsPageState extends State<SettingsPage> {
                 secondary: const Icon(Icons.notifications_active_outlined),
               ),
               SwitchListTile(
+                title: const Text('Email Notifications'),
+                subtitle: const Text('Receive updates via email'),
+                value: _emailNotificationsEnabled,
+                onChanged: authProvider.isLoading
+                    ? null
+                    : (val) => _updateEmailNotifications(authProvider, val),
+                secondary: const Icon(Icons.mail_outline),
+              ),
+              SwitchListTile(
+                title: const Text('Appointment Notifications'),
+                subtitle: const Text('Get alerts for appointment updates'),
+                value: _appointmentNotificationsEnabled,
+                onChanged: authProvider.isLoading
+                    ? null
+                    : (val) =>
+                        _updateAppointmentNotifications(authProvider, val),
+                secondary: const Icon(Icons.calendar_month_outlined),
+              ),
+              SwitchListTile(
+                title: const Text('Video Call Notifications'),
+                subtitle: const Text('Get notified about incoming video calls'),
+                value: _videoCallNotificationsEnabled,
+                onChanged: authProvider.isLoading
+                    ? null
+                    : (val) => _updateVideoCallNotifications(authProvider, val),
+                secondary: const Icon(Icons.video_call_outlined),
+              ),
+              const Divider(),
+              _buildSectionHeader('Appearance'),
+              SwitchListTile(
                 title: const Text('Dark Mode'),
                 subtitle: const Text('Switch between light and dark themes'),
                 value: preferences.isDarkMode,
                 onChanged: (val) => _updateDarkMode(preferences, val),
                 secondary: const Icon(Icons.dark_mode_outlined),
               ),
+              const Divider(),
+              _buildSectionHeader('Account'),
               ListTile(
                 leading: const Icon(Icons.lock_reset_outlined),
                 title: const Text('Reset Password'),

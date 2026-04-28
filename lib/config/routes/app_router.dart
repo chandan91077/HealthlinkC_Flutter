@@ -17,6 +17,7 @@ import 'package:healthlink_connect_flutter/features/chat/presentation/pages/conv
 import 'package:healthlink_connect_flutter/features/chat/presentation/pages/chat_page.dart';
 import 'package:healthlink_connect_flutter/features/video_call/presentation/pages/video_call_page.dart';
 import 'package:healthlink_connect_flutter/features/payment/presentation/pages/payment_page.dart';
+import 'package:healthlink_connect_flutter/features/payment/presentation/pages/payment_history_page.dart';
 import 'package:healthlink_connect_flutter/features/prescription/presentation/pages/prescriptions_page.dart';
 import 'package:healthlink_connect_flutter/features/records/presentation/pages/medical_records_page.dart';
 import 'package:healthlink_connect_flutter/features/emergency/presentation/pages/emergency_page.dart';
@@ -153,6 +154,11 @@ class AppRouter {
         builder: (context, state) => PaymentPage(
           bookingId: state.pathParameters['bookingId'] ?? '',
         ),
+      ),
+      GoRoute(
+        path: '/payment-history',
+        name: 'payment-history',
+        builder: (context, state) => const PaymentHistoryPage(),
       ),
       GoRoute(
         path: AppRoutes.prescriptions,

@@ -210,10 +210,10 @@ class _PatientDashboardPageState extends State<PatientDashboardPage>
         onTap: () => context.push(AppRoutes.specializations),
       ),
       _DashboardAction(
-        title: 'Payments',
-        icon: Icons.payments_outlined,
-        caption: 'Review bookings',
-        onTap: () => context.go(AppRoutes.appointments),
+        title: 'Payment History',
+        icon: Icons.receipt_long_outlined,
+        caption: 'View all payments',
+        onTap: () => context.push(AppRoutes.paymentHistory),
       ),
     ];
 

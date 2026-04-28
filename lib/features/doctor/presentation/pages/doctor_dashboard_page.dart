@@ -723,6 +723,13 @@ class _DoctorDashboardPageState extends State<DoctorDashboardPage>
                       ? _DoctorVerificationGate(
                           verificationStatus: _verificationStatus,
                           rejectionReason: _rejectionReason,
+                          appliedDate: _doctorProfile?['created_at'] != null
+                              ? DateTime.tryParse(_doctorProfile!['created_at'])
+                                      ?.toLocal()
+                                      .toString()
+                                      .split(' ')[0] ??
+                                  ''
+                              : '',
                         )
                       : SingleChildScrollView(
                           physics: const AlwaysScrollableScrollPhysics(),
@@ -1005,10 +1012,12 @@ class _DoctorVerificationGate extends StatelessWidget {
   const _DoctorVerificationGate({
     required this.verificationStatus,
     required this.rejectionReason,
+    this.appliedDate,
   });
 
   final String verificationStatus;
   final String rejectionReason;
+  final String? appliedDate;
 
   @override
   Widget build(BuildContext context) {
@@ -1045,6 +1054,16 @@ class _DoctorVerificationGate extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (appliedDate != null && appliedDate!.isNotEmpty) ...[
+                  Text(
+                    'Applied on: $appliedDate',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 Text(
                   isRejected
                       ? 'Your doctor profile was not approved. Please contact support or update your profile details and reapply.'
@@ -1068,18 +1087,33 @@ class _DoctorVerificationGate extends StatelessWidget {
                             .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    isRejected && rejectionReason.isNotEmpty
-                        ? 'Reason: $rejectionReason'
-                        : isRejected
-                            ? 'Reason: Not provided by admin.'
-                            : 'Verification usually takes 1-2 business days.',
-                    style: TextStyle(
-                      color: isRejected
-                          ? Theme.of(context).colorScheme.error
-                          : Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Status: ${verificationStatus.toUpperCase()}',
+                        style: TextStyle(
+                          color: isRejected
+                              ? Theme.of(context).colorScheme.error
+                              : Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        isRejected && rejectionReason.isNotEmpty
+                            ? 'Reason: $rejectionReason'
+                            : isRejected
+                                ? 'Reason: Not provided by admin.'
+                                : 'Verification usually takes 1-2 business days.',
+                        style: TextStyle(
+                          color: isRejected
+                              ? Theme.of(context).colorScheme.error
+                              : Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

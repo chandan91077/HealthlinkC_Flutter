@@ -9,8 +9,10 @@ class ContactPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const MediConnectHeader(),
       drawer: const MediConnectDrawer(),
       body: ListView(
@@ -46,62 +48,40 @@ class ContactPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          const _ContactCard(
+          _ContactCard(
             icon: Icons.email_outlined,
             title: 'Email',
             value: 'chandany67071@gmail.com',
+            isDarkMode: isDarkMode,
           ),
           const SizedBox(height: 10),
-          const _ContactCard(
+          _ContactCard(
             icon: Icons.phone_outlined,
             title: 'Phone',
             value: '9682000334',
+            isDarkMode: isDarkMode,
           ),
           const SizedBox(height: 10),
-          const _ContactCard(
+          _ContactCard(
             icon: Icons.location_on_outlined,
             title: 'Address',
             value: '123 Healthcare Ave, Medical City, MC 12345',
+            isDarkMode: isDarkMode,
           ),
           const SizedBox(height: 12),
-          const Wrap(
+          Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _TagChip(label: '24/7 Chat Support'),
-              _TagChip(label: 'Average Response: < 10 mins'),
-              _TagChip(label: 'Multilingual Assistance'),
+              _TagChip(label: '24/7 Chat Support', isDarkMode: isDarkMode),
+              _TagChip(
+                  label: 'Average Response: < 10 mins', isDarkMode: isDarkMode),
+              _TagChip(
+                  label: 'Multilingual Assistance', isDarkMode: isDarkMode),
             ],
           ),
           const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3FAF8),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFDCECE8)),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Support Hours',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-                ),
-                SizedBox(height: 6),
-                Text('Mon - Fri: 8:00 AM - 10:00 PM',
-                    style: TextStyle(color: Color(0xFF334155))),
-                Text('Sat - Sun: 9:00 AM - 8:00 PM',
-                    style: TextStyle(color: Color(0xFF334155))),
-                SizedBox(height: 8),
-                Text(
-                  'For emergencies, please contact local emergency services immediately.',
-                  style: TextStyle(color: Color(0xFF475569), height: 1.3),
-                ),
-              ],
-            ),
-          ),
+          _SupportHoursCard(isDarkMode: isDarkMode),
         ],
       ),
     );
@@ -113,17 +93,20 @@ class _ContactCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.value,
+    required this.isDarkMode,
   });
 
   final IconData icon;
   final String title;
   final String value;
+  final bool isDarkMode;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 1.2,
+      elevation: isDarkMode ? 0 : 1.2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: isDarkMode ? Theme.of(context).cardColor : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
@@ -133,10 +116,15 @@ class _ContactCard extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: const Color(0xFFE6F7F4),
+                color: isDarkMode
+                    ? const Color(0xFF0D9488).withValues(alpha: 0.2)
+                    : const Color(0xFFE6F7F4),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: const Color(0xFF0D9488)),
+              child: Icon(
+                icon,
+                color: const Color(0xFF0D9488),
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -145,14 +133,23 @@ class _ContactCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 17),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: isDarkMode
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Colors.black,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style:
-                        const TextStyle(color: Color(0xFF334155), height: 1.35),
+                    style: TextStyle(
+                      color: isDarkMode
+                          ? Theme.of(context).colorScheme.onSurfaceVariant
+                          : const Color(0xFF334155),
+                      height: 1.35,
+                    ),
                   ),
                 ],
               ),
@@ -165,26 +162,102 @@ class _ContactCard extends StatelessWidget {
 }
 
 class _TagChip extends StatelessWidget {
-  const _TagChip({required this.label});
+  const _TagChip({
+    required this.label,
+    required this.isDarkMode,
+  });
 
   final String label;
+  final bool isDarkMode;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF8F6),
+        color: isDarkMode
+            ? const Color(0xFF0D9488).withValues(alpha: 0.15)
+            : const Color(0xFFEAF8F6),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFD4EBE6)),
+        border: Border.all(
+          color: isDarkMode
+              ? const Color(0xFF0D9488).withValues(alpha: 0.3)
+              : const Color(0xFFD4EBE6),
+        ),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Color(0xFF1E4D4A),
+        style: TextStyle(
+          color: isDarkMode ? const Color(0xFF5EEAD4) : const Color(0xFF1E4D4A),
           fontWeight: FontWeight.w600,
           fontSize: 12,
         ),
+      ),
+    );
+  }
+}
+
+class _SupportHoursCard extends StatelessWidget {
+  const _SupportHoursCard({required this.isDarkMode});
+
+  final bool isDarkMode;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color:
+            isDarkMode ? Theme.of(context).cardColor : const Color(0xFFF3FAF8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDarkMode
+              ? Theme.of(context).colorScheme.outline.withValues(alpha: 0.2)
+              : const Color(0xFFDCECE8),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Support Hours',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: isDarkMode
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Colors.black,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Mon - Fri: 8:00 AM - 10:00 PM',
+            style: TextStyle(
+              color: isDarkMode
+                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                  : const Color(0xFF334155),
+            ),
+          ),
+          Text(
+            'Sat - Sun: 9:00 AM - 8:00 PM',
+            style: TextStyle(
+              color: isDarkMode
+                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                  : const Color(0xFF334155),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'For emergencies, please contact local emergency services immediately.',
+            style: TextStyle(
+              color: isDarkMode
+                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                  : const Color(0xFF475569),
+              height: 1.3,
+            ),
+          ),
+        ],
       ),
     );
   }
