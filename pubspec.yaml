@@ -1,6 +1,6 @@
 name: healthlink_connect_flutter
 description: A new Flutter project for MediConnect.
-version: 1.0.17+18
+version: 1.0.19+20
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
@@ -50,6 +50,12 @@ dependencies:
   local_auth: ^3.0.1
   url_launcher: ^6.2.5
   flutter_cashfree_pg_sdk: ^2.2.10+48
+
+  # ── MediAI Assistant Features ──────────────────────────────────────────────
+  speech_to_text: ^7.0.0       # Native STT (voice input + translation)
+  flutter_tts: ^3.8.3          # Native TTS (voice reply + translation)
+  socket_io_client: ^3.0.0     # Real-time Socket.IO for pill reminders
+  uuid: ^4.5.1                 # Session ID generation for assistant
 
 dev_dependencies:
   flutter_test:

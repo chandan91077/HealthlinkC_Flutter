@@ -47,5 +47,12 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- MediAI Voice Assistant Permissions -->
+		<key>NSMicrophoneUsageDescription</key>
+		<string>MediConnect uses your microphone to let you speak health queries to the AI assistant in your preferred language.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>MediConnect uses speech recognition to transcribe your voice into text queries for the AI assistant.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>MediConnect needs access to your photo library so you can upload medical reports for AI analysis.</string>
 	</dict>
 </plist>

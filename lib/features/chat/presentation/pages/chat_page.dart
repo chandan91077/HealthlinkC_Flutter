@@ -1002,94 +1002,132 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _messageBubble(Map<String, dynamic> message, {DateTime? timestamp}) {
-    final colorScheme = Theme.of(context).colorScheme;
     final mine = _isMine(message);
     final type = message['message_type']?.toString() ?? 'text';
     final content = message['content']?.toString() ?? '';
     final fileUrl = message['file_url']?.toString() ?? '';
+    final isRead = message['is_read'] == true;
 
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 290),
-        child: Card(
-          color: mine
-              ? AppColors.primary
-              : colorScheme.surfaceVariant.withValues(alpha: 0.45),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.8,
+        ),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: mine ? const Color(0xFFE7FFDB) : Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(12),
+              topRight: const Radius.circular(12),
+              bottomLeft: mine ? const Radius.circular(12) : const Radius.circular(0),
+              bottomRight: mine ? const Radius.circular(0) : const Radius.circular(12),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 1,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment:
-                  mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Stack(
               children: [
-                if (type == 'image' && fileUrl.isNotEmpty)
-                  GestureDetector(
-                    onTap: () => openExternalLink(
-                      context,
-                      fileUrl,
-                      invalidMessage: 'Invalid file link.',
-                      failureMessage: 'Unable to open link.',
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        fileUrl,
-                        height: 140,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Text(
-                          'Image unavailable',
-                          style: TextStyle(
-                              color: mine
-                                  ? Colors.white70
-                                  : colorScheme.onSurfaceVariant),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (type == 'image' && fileUrl.isNotEmpty)
+                      GestureDetector(
+                        onTap: () => openExternalLink(
+                          context,
+                          fileUrl,
+                          invalidMessage: 'Invalid file link.',
+                          failureMessage: 'Unable to open link.',
                         ),
-                      ),
-                    ),
-                  ),
-                if (type == 'file' && fileUrl.isNotEmpty)
-                  InkWell(
-                    onTap: () => openExternalLink(
-                      context,
-                      fileUrl,
-                      invalidMessage: 'Invalid file link.',
-                      failureMessage: 'Unable to open link.',
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.attach_file,
-                            color: mine ? Colors.white : AppColors.primary),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Open file',
-                          style: TextStyle(
-                            color: mine ? Colors.white : AppColors.primary,
-                            decoration: TextDecoration.underline,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            fileUrl,
+                            height: 200,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Text(
+                              'Image unavailable',
+                              style: TextStyle(color: Colors.black54),
+                            ),
                           ),
                         ),
+                      ),
+                    if (type == 'file' && fileUrl.isNotEmpty)
+                      InkWell(
+                        onTap: () => openExternalLink(
+                          context,
+                          fileUrl,
+                          invalidMessage: 'Invalid file link.',
+                          failureMessage: 'Unable to open link.',
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.insert_drive_file, color: Colors.black54, size: 30),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Document',
+                                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (content.isNotEmpty) ...[
+                      if ((type == 'image' || type == 'file') && fileUrl.isNotEmpty)
+                        const SizedBox(height: 6),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12, right: 40),
+                        child: Text(
+                          content,
+                          style: const TextStyle(color: Colors.black87, fontSize: 15),
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                    ]
+                  ],
+                ),
+                if (timestamp != null)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          _timeLabel(timestamp),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        if (mine) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.done_all,
+                            size: 14,
+                            color: isRead ? Colors.blue : Colors.black54,
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                if (content.isNotEmpty) ...[
-                  if ((type == 'image' || type == 'file') && fileUrl.isNotEmpty)
-                    const SizedBox(height: 6),
-                  Text(
-                    content,
-                    style: TextStyle(
-                        color: mine ? Colors.white : colorScheme.onSurface),
-                  ),
-                ],
-                if (timestamp != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    _timeLabel(timestamp),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color:
-                          mine ? Colors.white70 : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -1099,57 +1137,77 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _inputArea() {
-    final colorScheme = Theme.of(context).colorScheme;
     final canSend = _isDoctor || _chatUnlocked;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            offset: const Offset(0, -2),
-            blurRadius: 10,
-          ),
-        ],
-      ),
+      color: Colors.transparent,
       child: SafeArea(
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            IconButton(
-              icon: const Icon(Icons.attach_file),
-              color: canSend ? AppColors.primary : Colors.grey,
-              onPressed: (_isSending || !canSend) ? null : _sendAttachment,
-            ),
             Expanded(
-              child: TextField(
-                controller: _messageController,
-                enabled: canSend,
-                decoration: InputDecoration(
-                  hintText:
-                      canSend ? 'Type a message...' : 'Chat disabled by doctor',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: colorScheme.surfaceVariant.withValues(alpha: 0.45),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      offset: const Offset(0, 1),
+                      blurRadius: 2,
+                    ),
+                  ],
                 ),
-                textCapitalization: TextCapitalization.sentences,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.grey),
+                      onPressed: () {},
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        enabled: canSend,
+                        maxLines: 5,
+                        minLines: 1,
+                        decoration: InputDecoration(
+                          hintText: canSend ? 'Message' : 'Chat disabled',
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        textCapitalization: TextCapitalization.sentences,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.attach_file, color: Colors.grey),
+                      onPressed: (_isSending || !canSend) ? null : _sendAttachment,
+                    ),
+                    if (_messageController.text.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 8.0),
+                        child: IconButton(
+                          icon: Icon(Icons.camera_alt, color: Colors.grey),
+                          onPressed: null,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 8),
-            CircleAvatar(
-              backgroundColor: canSend ? AppColors.primary : Colors.grey,
+            Container(
+              margin: const EdgeInsets.only(bottom: 2),
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
               child: IconButton(
                 icon: _isSending
                     ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
                     : const Icon(Icons.send, color: Colors.white, size: 20),
                 onPressed: (_isSending || !canSend) ? null : _sendText,
@@ -1250,11 +1308,13 @@ class _ChatPageState extends State<ChatPage> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!))
-              : Column(
-                  children: [
-                    _callActionsCard(),
-                    Expanded(
-                      child: _messages.isEmpty
+              : Container(
+                  color: const Color(0xFFEFEAE2),
+                  child: Column(
+                    children: [
+                      _callActionsCard(),
+                      Expanded(
+                        child: _messages.isEmpty
                           ? const Center(child: Text('No messages yet.'))
                           : ListView.builder(
                               padding: const EdgeInsets.all(12),
@@ -1309,6 +1369,7 @@ class _ChatPageState extends State<ChatPage> {
                     _inputArea(),
                   ],
                 ),
+              ),
     );
   }
 }

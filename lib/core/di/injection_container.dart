@@ -7,6 +7,11 @@ import 'package:healthlink_connect_flutter/core/services/google_sign_in_service.
 import 'package:healthlink_connect_flutter/core/services/local_notification_service.dart';
 import 'package:healthlink_connect_flutter/features/auth/data/repositories/auth_repository.dart';
 import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
+import 'package:healthlink_connect_flutter/features/assistant/data/datasources/assistant_remote_datasource.dart';
+import 'package:healthlink_connect_flutter/features/assistant/data/repositories/assistant_repository.dart';
+import 'package:healthlink_connect_flutter/features/assistant/presentation/providers/assistant_provider.dart';
+import 'package:healthlink_connect_flutter/services/voice_service.dart';
+import 'package:healthlink_connect_flutter/services/assistant_socket_service.dart';
 
 final sl = GetIt.instance;
 
@@ -29,6 +34,7 @@ Future<void> configureDependencies() async {
   _initNotifications();
   _initEmergency();
   _initRecords();
+  _initAssistant();
 }
 
 void _initAuth() {
@@ -82,4 +88,23 @@ void _initEmergency() {
 
 void _initRecords() {
   // Medical records dependencies will go here
+}
+
+void _initAssistant() {
+  sl.registerLazySingleton(() => VoiceService());
+  sl.registerLazySingleton(
+    () => AssistantSocketService(notificationService: sl()),
+  );
+  sl.registerLazySingleton(
+    () => AssistantRemoteDatasource(apiClient: sl()),
+  );
+  sl.registerLazySingleton(
+    () => AssistantRepository(datasource: sl()),
+  );
+  sl.registerFactory(
+    () => AssistantProvider(
+      repository: sl(),
+      voiceService: sl(),
+    ),
+  );
 }

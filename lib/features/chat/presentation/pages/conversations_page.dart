@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:healthlink_connect_flutter/core/di/injection_container.dart';
 import 'package:healthlink_connect_flutter/core/network/api_client.dart';
+import 'package:provider/provider.dart';
+import 'package:healthlink_connect_flutter/features/auth/presentation/providers/auth_provider.dart';
 
 class ConversationsPage extends StatefulWidget {
   const ConversationsPage({super.key});
@@ -195,70 +197,129 @@ class _ConversationsPageState extends State<ConversationsPage> {
                             final unread = (conversation['unreadCount'] as num?)
                                     ?.toInt() ??
                                 0;
+                            final currentUserId = context.read<AuthProvider>().user?.id;
+                            bool isMine = false;
+                            bool isRead = false;
+                            final lastMessage = conversation['lastMessage'];
+                            if (lastMessage is Map<String, dynamic>) {
+                               final sender = lastMessage['sender_id'];
+                               String senderId = '';
+                               if (sender is Map<String, dynamic>) {
+                                 senderId = sender['_id']?.toString() ?? sender['id']?.toString() ?? '';
+                               } else {
+                                 senderId = sender?.toString() ?? '';
+                               }
+                               isMine = senderId.isNotEmpty && senderId == currentUserId;
+                               isRead = lastMessage['is_read'] == true;
+                            }
 
-                            return ListTile(
-                              leading: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  const CircleAvatar(
-                                    child: Icon(Icons.person),
-                                  ),
-                                  if (chatUnlocked)
-                                    Positioned(
-                                      right: -1,
-                                      bottom: -1,
-                                      child: Container(
-                                        width: 10,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          color: Colors.green,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              title: Text(
-                                conversation['otherPartyName']?.toString() ??
-                                    'Conversation',
-                              ),
-                              subtitle: Text(
-                                _subtitle(conversation),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    _timeLabel(conversation),
-                                    style: const TextStyle(
-                                        color: Colors.grey, fontSize: 12),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  if (unread > 0)
-                                    Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).primaryColor,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Text(
-                                        unread.toString(),
-                                        style: const TextStyle(
-                                            color: Colors.white, fontSize: 10),
-                                      ),
-                                    ),
-                                ],
-                              ),
+                            return InkWell(
                               onTap: appointmentId.isEmpty
                                   ? null
                                   : () => context.push('/chat/$appointmentId'),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 24,
+                                          backgroundColor: Colors.grey.shade200,
+                                          child: Icon(Icons.person, color: Colors.grey.shade600, size: 28),
+                                        ),
+                                        if (chatUnlocked)
+                                          Positioned(
+                                            right: 0,
+                                            bottom: 0,
+                                            child: Container(
+                                              width: 14,
+                                              height: 14,
+                                              decoration: BoxDecoration(
+                                                color: Colors.green,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Theme.of(context).scaffoldBackgroundColor,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  conversation['otherPartyName']?.toString() ?? 'Conversation',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 16,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Text(
+                                                _timeLabel(conversation),
+                                                style: TextStyle(
+                                                  color: unread > 0 ? Theme.of(context).primaryColor : Colors.grey.shade600,
+                                                  fontSize: 12,
+                                                  fontWeight: unread > 0 ? FontWeight.w600 : FontWeight.normal,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              if (isMine) ...[
+                                                Icon(
+                                                  Icons.done_all,
+                                                  size: 16,
+                                                  color: isRead ? Colors.blue : Colors.grey.shade500,
+                                                ),
+                                                const SizedBox(width: 4),
+                                              ],
+                                              Expanded(
+                                                child: Text(
+                                                  _subtitle(conversation),
+                                                  style: TextStyle(
+                                                    color: Colors.grey.shade600,
+                                                    fontSize: 14,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              if (unread > 0)
+                                                Container(
+                                                  padding: const EdgeInsets.all(6),
+                                                  decoration: BoxDecoration(
+                                                    color: Theme.of(context).primaryColor,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: Text(
+                                                    unread.toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                         ),
