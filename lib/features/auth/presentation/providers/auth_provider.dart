@@ -5,15 +5,18 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:healthlink_connect_flutter/core/services/google_sign_in_service.dart';
 import 'package:healthlink_connect_flutter/features/auth/data/repositories/auth_repository.dart';
 import 'package:healthlink_connect_flutter/features/auth/domain/entities/auth_user.dart';
+import 'package:healthlink_connect_flutter/core/network/api_client.dart';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider({
     required AuthRepository authRepository,
     required FlutterSecureStorage secureStorage,
     required GoogleSignInService googleSignInService,
+    required ApiClient apiClient,
   })  : _authRepository = authRepository,
         _secureStorage = secureStorage,
-        _googleSignInService = googleSignInService;
+        _googleSignInService = googleSignInService,
+        _apiClient = apiClient;
 
   static const String _tokenKey = 'auth_token';
   static const String _roleKey = 'user_role';
@@ -21,6 +24,7 @@ class AuthProvider extends ChangeNotifier {
   final AuthRepository _authRepository;
   final FlutterSecureStorage _secureStorage;
   final GoogleSignInService _googleSignInService;
+  final ApiClient _apiClient;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -28,12 +32,25 @@ class AuthProvider extends ChangeNotifier {
   String? _role;
   AuthUser? _user;
 
+  /// For doctors: whether their profile has been verified by admin.
+  /// null = not yet fetched / not a doctor.
+  /// true  = verified.
+  /// false = pending or rejected.
+  bool? _isDoctorVerified;
+
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get token => _token;
   String? get role => _role;
   AuthUser? get user => _user;
   bool get isAuthenticated => (_token ?? '').isNotEmpty;
+
+  /// Returns true only when the doctor has been verified.
+  /// For patients / admins this always returns true (no gate needed).
+  bool get isDoctorVerified {
+    if (_role != 'doctor') return true;
+    return _isDoctorVerified ?? false;
+  }
 
   Future<void> hydrate() async {
     _token = await _secureStorage.read(key: _tokenKey);
@@ -48,11 +65,39 @@ class AuthProvider extends ChangeNotifier {
     if (!isAuthenticated || _role == null) return;
     try {
       _user = await _authRepository.fetchProfile(_role!);
+
+      // For doctors, also fetch verification status
+      if (_role == 'doctor') {
+        await _fetchDoctorVerification();
+      }
     } catch (_) {
       // Silently fail — user stays authenticated
     } finally {
       notifyListeners();
     }
+  }
+
+  /// Fetches the doctor profile to check is_verified.
+  Future<void> _fetchDoctorVerification() async {
+    final userId = _user?.id?.trim() ?? '';
+    if (userId.isEmpty) return;
+    try {
+      final response = await _apiClient.get('/api/doctors/user/$userId');
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        _isDoctorVerified = data['is_verified'] == true;
+      }
+    } catch (_) {
+      // If we can't fetch, default to not-verified to be safe
+      _isDoctorVerified = false;
+    }
+  }
+
+  /// Call this after doctor is verified by admin so the guard unlocks immediately.
+  Future<void> refreshDoctorVerification() async {
+    if (_role != 'doctor') return;
+    await _fetchDoctorVerification();
+    notifyListeners();
   }
 
   Future<bool> updateProfile({
@@ -103,9 +148,15 @@ class AuthProvider extends ChangeNotifier {
       _token = result.token;
       _role = result.role;
       _user = result.user;
+      _isDoctorVerified = null;
 
       await _secureStorage.write(key: _tokenKey, value: result.token);
       await _secureStorage.write(key: _roleKey, value: result.role);
+
+      // Fetch verification status right away for doctors
+      if (result.role == 'doctor') {
+        await _fetchDoctorVerification();
+      }
 
       return true;
     } catch (e) {
@@ -134,9 +185,15 @@ class AuthProvider extends ChangeNotifier {
       _token = result.token;
       _role = result.role;
       _user = result.user;
+      _isDoctorVerified = null;
 
       await _secureStorage.write(key: _tokenKey, value: result.token);
       await _secureStorage.write(key: _roleKey, value: result.role);
+
+      // Fetch verification status right away for doctors
+      if (result.role == 'doctor') {
+        await _fetchDoctorVerification();
+      }
 
       return true;
     } catch (e) {
@@ -153,6 +210,7 @@ class AuthProvider extends ChangeNotifier {
     _role = null;
     _user = null;
     _errorMessage = null;
+    _isDoctorVerified = null;
 
     await _secureStorage.delete(key: _tokenKey);
     await _secureStorage.delete(key: _roleKey);
@@ -192,3 +250,4 @@ class AuthProvider extends ChangeNotifier {
     return 'Login failed. Please verify your credentials.';
   }
 }
+

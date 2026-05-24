@@ -44,6 +44,7 @@ void _initAuth() {
       authRepository: sl(),
       secureStorage: sl(),
       googleSignInService: sl(),
+      apiClient: sl(),
     ),
   );
 }

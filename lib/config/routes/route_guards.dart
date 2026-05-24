@@ -7,6 +7,7 @@ String? routeGuard(context, GoRouterState state) {
   final authProvider = sl<AuthProvider>();
   final bool isLoggedIn = authProvider.isAuthenticated;
   final role = authProvider.role;
+  final bool isVerified = authProvider.isDoctorVerified;
 
   final publicPages = [
     '/',
@@ -34,6 +35,17 @@ String? routeGuard(context, GoRouterState state) {
   final isPublicPage = publicPages.contains(state.matchedLocation);
 
   if (!isLoggedIn && !isPublicPage) return AppRoutes.login;
+
+  // Unverified doctor: redirect to doctor dashboard (shows verification gate)
+  // Allow them on: doctor-dashboard itself (the gate UI), login/register, and public pages
+  if (isLoggedIn &&
+      role == 'doctor' &&
+      !isVerified &&
+      state.matchedLocation != AppRoutes.doctorDashboard &&
+      !isPublicPage) {
+    return AppRoutes.doctorDashboard;
+  }
+
   if (isLoggedIn &&
       role == 'doctor' &&
       state.matchedLocation == AppRoutes.bookAppointment) {
@@ -54,3 +66,4 @@ String? routeGuard(context, GoRouterState state) {
   }
   return null;
 }
+
